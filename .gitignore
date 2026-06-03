@@ -1,0 +1,19 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Environment variables / secrets
+.env
+.env.local
+
+# macOS system files
+.DS_Store
+
+# FAISS local indices (if any temp indexes are created, we exclude db files or let user keep it. Let's keep data/knowledge_base.md but exclude local FAISS cache directories if needed. Let's leave data/ in git because knowledge_base.md is needed)
