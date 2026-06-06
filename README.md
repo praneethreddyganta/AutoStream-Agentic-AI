@@ -1,188 +1,187 @@
-# AutoStream Social-to-Lead Conversational AI Agent
+# AutoStream Agentic AI: Social-to-Lead Conversational Assistant
 
-Welcome to the **AutoStream AI Agent** project codebase. This is a production-grade, conversational sales and support agent built for the fictional SaaS company **AutoStream** (under the ServiceHive/Inflx platform). 
+Welcome to the **AutoStream Agentic AI** repository. This project is a production-grade, conversational sales and support agent built for the fictional SaaS company **AutoStream** (operating under the ServiceHive/Inflx platform). 
 
-The agent is designed to classify user intents, retrieve product and pricing features using Retrieval-Augmented Generation (RAG) powered by a local FAISS database, and execute a dynamic multi-turn lead-qualification slot-filling workflow that triggers a backend mock lead capture API tool.
-
-**This implementation is configured to use Google Gemini (Gemini 1.5 Flash) and Google Text Embeddings, making development and execution completely FREE using Google AI Studio developer keys!**
+The agent utilizes **LangGraph** state machines to orchestrate multi-turn slot-filling lead capture workflows, retrieves real-time pricing and features from a local **FAISS Vector Database** using Retrieval-Augmented Generation (RAG), and features a premium, responsive **Streamlit** user interface designed to replicate modern commercial AI products (like ChatGPT and Claude).
 
 ---
 
-## 📁 Folder Structure
+## 📖 Overview
+
+### What is Agentic AI?
+Unlike simple prompt-based chatbots, **Agentic AI** systems are autonomous entities that make decisions, determine execution routing, and call external APIs (tools) based on conversation state. This project models the conversational sales funnel as a state machine. It uses LangGraph to manage complex state transitions deterministically, ensuring that intent is classified accurately, information is collected progressively (slot-filling), and backend capture APIs are triggered only when all lead variables are satisfied.
+
+### Retrieval-Augmented Generation (RAG)
+To handle product inquiries, the agent employs **RAG**. When users ask about pricing, features, or refund policies, the agent queries a local vector store containing AutoStream's knowledge database. This retrieved context is injected into the LLM prompt, ensuring the chatbot provides highly accurate, factually grounded answers and completely avoids hallucinating custom plans or pricing details.
+
+### Lead Qualification Funnel
+Once the agent detects high user intent (e.g., a desire to upgrade or purchase a subscription), it transitions into a structured **lead qualification workflow**. It progressively prompts for, validates, and stores:
+1. **Lead Name**
+2. **Lead Email**
+3. **Creator Platform** (e.g. YouTube, Instagram, TikTok)
+
+Once all slots are successfully filled, the agent automatically executes the mock CRM lead capture tool to write the customer details to the database.
+
+---
+
+## 🏛️ Architecture
+
+The conversational state graph is structured as follows:
+
+```mermaid
+graph TD
+    User([User Input]) --> Intent[Intent Detection Node]
+    Intent --> Router{State Router Edge}
+    
+    Router -- "Greeting" --> ResponseGen[Response Generator Node]
+    Router -- "Product/Pricing Inquiry" --> RAG[RAG Retrieval Node]
+    Router -- "High-Intent Lead" --> Qualifier[Lead Slot Extraction Node]
+    
+    Qualifier --> Complete{All Slots Filled?}
+    Complete -- "No" --> END([End Turn / Wait for Input])
+    Complete -- "Yes" --> Tool[Tool Execution Node]
+    
+    Tool --> END
+    RAG --> END
+    ResponseGen --> END
+```
+
+---
+
+## ✨ Features
+
+- **LangGraph State Graph**: Models the entire conversational flow as a state machine with persistent session checkpointer memory.
+- **Gemini 2.5 Flash Integration**: Powered by Google Gemini API for fast, reliable intent classification and natural response generation.
+- **FAISS Vector Store RAG**: Performs semantic search over local markdown documents using Google Text Embeddings for pricing and policy queries.
+- **Structured Lead Slot-Filling**: Dynamically tracks and extracts parameters progressively over multiple turns.
+- **Mock CRM Integration**: Automatically executes backend mock lead capture tools upon slot completion.
+- **Premium Streamlit UI**: Modern dark theme with custom glassmorphic cards, linear progress bars, active intent badges, and visual RAG retrieval status indicators.
+
+---
+
+## 🛠️ Tech Stack
+
+- **Core Logic**: Python 3.11
+- **Orchestration**: LangGraph, LangChain Core
+- **Vector Search**: FAISS (Facebook AI Similarity Search)
+- **AI Models**: Google Gemini 2.5 Flash, Google Text Embeddings (`models/gemini-embedding-001`)
+- **Dashboard Interface**: Streamlit
+
+---
+
+## 📂 Project Structure
 
 ```text
-servicehive-agent/
+AutoStream-Agentic-AI/
 │
-├── app.py                     # Main CLI interactive chatbot runner
-├── requirements.txt           # Python package dependencies
+├── app.py                     # CLI Interactive Chatbot Runner
+├── streamlit_app.py           # Premium Streamlit GUI Web Dashboard
+├── requirements.txt           # Python Package Dependencies
+├── .gitignore                 # Files excluded from Git
+├── .env.example               # Environment Variables template
 ├── README.md                  # Comprehensive documentation and setup guide
-├── .env.example               # Environment variable configuration template
 │
-├── agent/                     # Core Agent Logic
+├── agent/                     # Core Agent Module
 │   ├── __init__.py
 │   ├── graph.py               # LangGraph StateGraph state machine structure
 │   ├── intents.py             # LLM Intent classification node logic
-│   ├── rag.py                 # RAG document loader, vector store index, and retriever
-│   ├── tools.py               # Mock lead capture tool function
-│   └── state.py               # Agent State TypedDict schema definition
+│   ├── rag.py                 # FAISS Loader and semantic retrieval helper
+│   ├── state.py               # TypedDict schema definition for Agent State
+│   └── tools.py               # Mock CRM API Lead Capture function
 │
 └── data/                      # Local Knowledge Base
-    └── knowledge_base.md      # AutoStream pricing tiers, features, and refund policies
+    └── knowledge_base.md      # AutoStream pricing tiers, features, and policies
 ```
 
 ---
 
-## 🚀 Installation and Setup
+## 🚀 Setup Instructions
 
 ### Prerequisites
-- Python 3.11 or higher
-- A **Google Gemini API Key** (Completely FREE at [Google AI Studio](https://aistudio.google.com/))
+- Python 3.11 or 3.12 installed
+- A **Google Gemini API Key** (Get a free developer key from [Google AI Studio](https://aistudio.google.com/))
 
-### 1. Clone & Navigate to the Project
+### 1. Clone & Navigate
 ```bash
-cd /Users/gantapraneethreddy/.gemini/antigravity/scratch/servicehive-agent
+git clone https://github.com/praneethreddyganta/AutoStream-Agentic-AI.git
+cd AutoStream-Agentic-AI
 ```
 
-### 2. Set Up a Virtual Environment (Recommended)
+### 2. Set Up Virtual Environment
 ```bash
-python3 -m venv venv
+python3.11 -m venv venv
 source venv/bin/activate
 ```
 
 ### 3. Install Dependencies
 ```bash
-pip install --upgrade pip
+pip install --upgrade pip setuptools wheel
 pip install -r requirements.txt
 ```
 
-### 4. Configure Environment Variables
-Copy the `.env.example` file to create an active `.env` file:
+### 4. Configure Secrets
+Copy the environment template:
 ```bash
 cp .env.example .env
 ```
-Open `.env` in your text editor and paste your Google API key:
+Open `.env` and paste your Gemini API key:
 ```env
 GOOGLE_API_KEY=AIzaSyYourActualGoogleGeminiKeyHere
 ```
 
+### 5. Running the Application
+- **Run the CLI Interactive Chatbot**:
+  ```bash
+  python app.py
+  ```
+- **Run the Premium Streamlit Dashboard**:
+  ```bash
+  streamlit run streamlit_app.py
+  ```
+
 ---
 
-## 🏃 Running the Agent Locally
+## ☁️ Streamlit Community Cloud Deployment
 
-Start the interactive terminal CLI chatbot interface:
-```bash
-python3 app.py
-```
+To deploy this application to **Streamlit Community Cloud** for production access:
 
-### 💬 Conversation Walkthrough Example
+1. Push your repository to GitHub.
+2. Log in to [Streamlit Community Cloud](https://share.streamlit.io/) with your GitHub account.
+3. Click **New app**, select your repository, set the branch to `main`, and set the file path to:
+   ```text
+   streamlit_app.py
+   ```
+4. Click **Advanced settings** before deploying. Under the **Secrets** section, configure your environment variables:
+   ```toml
+   GOOGLE_API_KEY = "AIzaSyYourActualGoogleGeminiKeyHere"
+   ```
+5. Click **Save** and then **Deploy**. Your app will be live on the web in seconds!
+
+---
+
+## 💬 Example Conversation
 
 ```text
-You: Hi
-Bot: Hello! Welcome to AutoStream, your automated video editing partner. How can I assist you with your content creation journey today?
+User: Hi
+Agent: Hello! Welcome to AutoStream, your automated video editing partner. How can I assist you with your content creation journey today?
 
-You: Tell me about your pricing.
-Bot: AutoStream offers two primary pricing tiers to suit your needs:
-1. **Basic Plan** ($29/month): Includes rendering 10 videos per month at 720p resolution.
-2. **Pro Plan** ($79/month): Offers unlimited videos, rendering in crisp 4K resolution, and AI captions.
+User: How much does the Pro plan cost?
+Agent: The AutoStream Pro Plan costs $79/month. It includes unlimited videos, 4K rendering, AI captions, and 24/7 priority live support.
 
-You: I want the Pro plan for my YouTube channel.
-Bot: Great choice! I'd love to help you get started on our Pro Plan. May I know your name first?
+User: I want the Pro plan for my YouTube channel.
+Agent: Excellent choice! I'd love to help you get started on our Pro Plan. May I know your name first?
 
-You: Praneeth
-Bot: Please share your email.
+User: Praneeth
+Agent: Thanks, Praneeth! Please share your email address.
 
-You: praneeth@gmail.com
-Bot: Which creator platform do you use?
-
-You: YouTube
-
-[TOOL EXECUTION] Lead captured successfully: Praneeth, praneeth@gmail.com, YouTube
-Bot: Lead captured successfully: Praneeth, praneeth@gmail.com, YouTube
+User: praneeth@gmail.com
+Agent: Lead captured successfully: Praneeth, praneeth@gmail.com, YouTube!
 ```
 
 ---
 
-## 🏛️ Architecture Explanation
+## 🔮 Future Improvements
 
-### Why LangGraph?
-We selected **LangGraph** over AutoGen because our Social-to-Lead workflow requires deterministic, stateful flow control. While AutoGen excels at free-form, multi-agent debates, it introduces conversational drift and unpredictability that makes slot-filling highly unreliable. LangGraph models workflows as an elegant **StateGraph** state machine. This structure provides fine-grained control over state transitions, allowing us to enforce strict conditional logic: RAG queries resolve immediately, while high-intent lead qualification locks the conversation into a robust step-by-step extraction loops, executing tools only after all slots are filled.
-
-### State Management
-State is managed globally in our `AgentState` schema defined as a Python `TypedDict`. This state tracks conversation history (`messages`), detected intent, and lead slots (`lead_name`, `lead_email`, `lead_platform`, `lead_collection_stage`). 
-
-```mermaid
-graph TD
-    START --> intent_detector[Intent Detection Node]
-    intent_detector --> router{State Router Edge}
-    
-    router -- "Greeting / Unknown" --> response_generator[ChitChat Node]
-    router -- "Product/Pricing Inquiry" --> rag_retriever[RAG Query Node]
-    router -- "High-Intent Lead" --> lead_qualifier[Slot Extraction Node]
-    
-    rag_retriever --> END
-    response_generator --> END
-    
-    lead_qualifier --> slot_check{All Slots Filled?}
-    slot_check -- "No" --> END
-    slot_check -- "Yes" --> tool_execution[Tool Execution Node]
-    
-    tool_execution --> END
-```
-
-Using LangGraph’s persistent `MemorySaver` checkpointer, state variables are automatically serialized and cached. Every turn uses a session-bound `thread_id` configuration, allowing multiple concurrent users to have their conversations and qualified slots managed independently without cross-talk or data leakage.
-
----
-
-## 💬 WhatsApp Webhook Deployment Integration
-
-To deploy this conversational AI agent to **WhatsApp** in a production environment, follow this structured integration architecture:
-
-### 1. Architecture Flow Diagram
-```text
-┌──────────┐  Webhook HTTP POST   ┌──────────────┐  State Resolution   ┌───────────┐
-│ WhatsApp │─────────────────────>│ FastAPI Host │────────────────────>│ LangGraph │
-│  Client  │<─────────────────────│ Webhook Server│<───────────────────│ Workflow  │
-└──────────┘  WhatsApp Send API   └──────────────┘  Persistent DB      └───────────┘
-```
-
-### 2. Step-by-Step Webhook Workflow
-
-1.  **Meta Portal Setup**:
-    - Register a Meta Developer Application and set up the **WhatsApp Business API** product.
-    - Configure a Webhook callback endpoint pointing to your cloud-hosted backend server (e.g., FastAPI/Flask deployed on GCP, AWS, or Render) using HTTPS.
-    - Set up a unique **Verification Token** to validate the handshake between Meta and your server.
-
-2.  **Receiving Incoming Messages**:
-    - When a user sends a text message to the WhatsApp Business number, Meta dispatches an HTTPS `POST` JSON payload to your webhook.
-    - Your server receives the payload, verifies the payload authenticity using the `X-Hub-Signature-256` header (hmac-sha256 signature with your App Secret), and extracts:
-      - The user's **phone number** (e.g., `+919988776655`).
-      - The **message text** (e.g., `"How much is the Pro plan?"`).
-
-3.  **LangGraph State Execution & Persistence**:
-    - The user's **phone number** is mapped directly as the LangGraph `thread_id`. This acts as the session index in the persistent checkpointer database (e.g., PostgreSQL or Redis Checkpointer).
-    - The webhook server invokes the compiled LangGraph workflow:
-      ```python
-      config = {"configurable": {"thread_id": user_phone_number}}
-      state_output = await compiled_graph.ainvoke(
-          {"messages": [HumanMessage(content=message_text)]}, 
-          config
-      )
-      ```
-    - LangGraph loads the user's historical state from database storage, executes intent classification, does FAISS search or updates lead capture slots, writes the updated state back to database storage, and generates an AI message reply.
-
-4.  **Replying to the User**:
-    - The webhook server extracts the content of the final AI message from the state output.
-    - It triggers an HTTPS `POST` request to Meta's WhatsApp Send Message Endpoint:
-      ```bash
-      POST https://graph.facebook.com/v18.0/<YOUR_BUSINESS_PHONE_NUMBER_ID>/messages
-      Authorization: Bearer <YOUR_ACCESS_TOKEN>
-      Content-Type: application/json
-      
-      {
-        "messaging_product": "whatsapp",
-        "to": "<USER_PHONE_NUMBER>",
-        "type": "text",
-        "text": { "body": "<ASSISTANT_REPLY>" }
-      }
-      ```
-    - The user receives the AI agent's response directly in their WhatsApp chat thread.
+- **Omnichannel Webhooks**: Deploy FastAPI endpoints to integrate the agent directly with WhatsApp Business and Telegram.
+- **CRM Integration**: Connect the lead capture tool to write details directly to Salesforce, Hubspot, or Notion databases.
+- **Multi-Agent Collaboration**: Split the graph into specialized subagents (e.g., an Billing Specialist agent, a Technical Support agent, and a Sales agent) routing queries dynamically.
