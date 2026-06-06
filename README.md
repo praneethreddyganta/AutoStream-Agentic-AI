@@ -31,7 +31,7 @@ The conversational state graph is structured as follows:
 ```mermaid
 graph TD
     User([User Input]) --> Intent[Intent Detection Node]
-    Intent --> [Conditional Edge]
+    Intent --> Router{Conditional Edge}
     
     Router -- "Greeting" --> ResponseGen[Response Generator Node]
     Router -- "Product/Pricing Inquiry" --> RAG[RAG Retrieval Node]
