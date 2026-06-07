@@ -2,26 +2,14 @@ import json
 from typing import Literal
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.language_models.chat_models import BaseChatModel
+from agent.prompts import INTENT_CLASSIFIER_SYSTEM_PROMPT
 
 def classify_intent(message: str, history_str: str, llm: BaseChatModel) -> str:
     """
     Uses the LLM to classify the user's intent based on the current message and history.
     """
     prompt = ChatPromptTemplate.from_messages([
-        ("system", """You are an AI sales and support routing assistant for AutoStream, a SaaS platform for automated video editing.
-Your job is to classify the user's latest message into exactly one of these categories:
-1. "Greeting": The user is saying hello, greeting you, or making casual chit-chat (e.g., "Hi", "Hello", "Good morning", "Hey").
-2. "Product/Pricing Inquiry": The user is asking about pricing plans, features, limitations, company policies, refunds, or support options.
-3. "High-Intent Lead": The user shows a clear intention to purchase, upgrade, subscribe, sign up, or try a premium plan (e.g., "I want to buy the Pro plan", "Sign me up for Pro", "I'd like to get the premium tier", "Let's purchase").
-4. "Unknown": The message does not fit any of the above categories.
-
-You MUST respond with a valid JSON object only. Do not output any markdown formatting, backticks (like ```json), or explanatory text.
-JSON format:
-{{
-    "intent": "Greeting" | "Product/Pricing Inquiry" | "High-Intent Lead" | "Unknown",
-    "rationale": "Brief 1-sentence explanation of classification"
-}}
-"""),
+        ("system", INTENT_CLASSIFIER_SYSTEM_PROMPT),
         ("human", """Conversation Context:
 {history_str}
 

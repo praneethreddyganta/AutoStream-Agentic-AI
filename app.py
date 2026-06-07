@@ -49,8 +49,9 @@ def main():
         from agent.graph import build_agent_graph
         
         # 1. Initialize core LLM and Embeddings using Google Gemini (FREE tier)
-        print("  🔹 Step 1/3: Instantiating ChatGemini 2.5 Flash and Embeddings...")
-        llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+        model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+        print(f"  🔹 Step 1/3: Instantiating ChatGemini ({model_name}) and Embeddings...")
+        llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
         embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
         
         # 2. Build local RAG Knowledge Base

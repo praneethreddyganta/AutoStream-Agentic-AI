@@ -11,6 +11,12 @@ from agent.state import AgentState
 from agent.intents import classify_intent
 from agent.tools import mock_lead_capture
 from agent.rag import AutoStreamRAG
+from agent.prompts import (
+    RAG_SYSTEM_PROMPT,
+    LEAD_EXTRACTION_SYSTEM_PROMPT,
+    GREETING_SYSTEM_PROMPT,
+    OUT_OF_DOMAIN_SYSTEM_PROMPT
+)
 
 def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
     """
@@ -71,19 +77,7 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
         context = rag_retriever.retrieve_context(latest_message)
         
         prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a highly helpful and professional AI sales and support representative for AutoStream.
-AutoStream is a SaaS platform providing automated video editing tools for content creators.
-
-Answer the user's question accurately using ONLY the provided local knowledge base context below.
-If the answer is not present in the context, politely let the user know and offer to capture their lead details so an agent can follow up.
-
-Knowledge Base Context:
-{context}
-
-Guidelines:
-- Keep the response professional, clear, and concise.
-- Direct users to the Pro plan if they ask about unlimited videos, 4K rendering, 24/7 priority live support, or AI captions.
-"""),
+            ("system", RAG_SYSTEM_PROMPT),
             ("placeholder", "{messages}")
         ])
         
@@ -104,29 +98,7 @@ Guidelines:
         
         # Extract fields using structured JSON extraction
         extract_prompt = ChatPromptTemplate.from_messages([
-            ("system", """You are a precise data extraction agent for AutoStream.
-Analyze the user's latest message and extract any of these customer slots if mentioned:
-1. "name": The user's name (e.g. "Praneeth", "My name is John").
-2. "email": The user's email address (e.g. "praneeth@gmail.com").
-3. "platform": The content creator platform they publish to (e.g. "YouTube", "Instagram", "TikTok", "Twitch").
-
-Current captured values:
-- Name: {current_name}
-- Email: {current_email}
-- Platform: {current_platform}
-
-Rules:
-- Keep existing captured values unless the user is explicitly correcting or changing them.
-- Respond with a valid JSON object ONLY, containing keys "name", "email", and "platform". Use null for fields not provided.
-- Do not output backticks (```json) or markdown framing.
-
-JSON format:
-{{
-    "name": "extracted_name" | null,
-    "email": "extracted_email" | null,
-    "platform": "extracted_platform" | null
-}}
-"""),
+            ("system", LEAD_EXTRACTION_SYSTEM_PROMPT),
             ("human", "{message}")
         ])
         
@@ -221,15 +193,12 @@ JSON format:
         
         if intent == "Greeting":
             prompt = ChatPromptTemplate.from_messages([
-                ("system", """You are AutoStream's friendly sales assistant.
-Greet the user enthusiastically, introduce yourself, and ask how you can help them with automated video editing solutions.
-Keep it extremely short (1-2 sentences)."""),
+                ("system", GREETING_SYSTEM_PROMPT),
                 ("placeholder", "{messages}")
             ])
         else:
             prompt = ChatPromptTemplate.from_messages([
-                ("system", """You are AutoStream's sales assistant.
-The user's message is outside normal domains. Politely respond and invite them to ask about AutoStream pricing, features, refund policy, or setting up a Pro account."""),
+                ("system", OUT_OF_DOMAIN_SYSTEM_PROMPT),
                 ("placeholder", "{messages}")
             ])
             

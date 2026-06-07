@@ -8,6 +8,9 @@ from langchain_core.messages import AIMessage, HumanMessage
 # Load environment variables
 load_dotenv()
 
+# Load configured model name
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+
 # Set up Streamlit Page configuration
 st.set_page_config(
     page_title="AutoStream Agentic AI - Sales & Support Dashboard",
@@ -170,7 +173,7 @@ def load_agent_graph():
     from agent.graph import build_agent_graph
     
     # Instantiate LLM and Embeddings using Google Gemini API
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
+    llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
     embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
     
     # Assemble local FAISS RAG index
@@ -275,7 +278,7 @@ with st.sidebar:
     st.markdown('### ⚙️ Session details')
     with st.container(border=True):
         st.markdown(f"**Session ID:** `{st.session_state.thread_id[:8]}...`")
-        st.markdown(f"**Model:** `gemini-2.5-flash`")
+        st.markdown(f"**Model:** `{MODEL_NAME}`")
         
         # Clear Conversation / Reset Session button
         if st.button("Reset Conversation", use_container_width=True, type="secondary"):
