@@ -124,7 +124,7 @@ def get_fallback_llm():
     
     # 1. Primary Gemini
     try:
-        gemini_model = ChatGoogleGenerativeAI(model=primary_gemini, temperature=0)
+        gemini_model = ChatGoogleGenerativeAI(model=primary_gemini, temperature=0, max_retries=1)
         runnables.append(make_logging_wrapper(gemini_model, primary_gemini))
     except Exception as e:
         print(f"❌ [LLM Setup Error] Could not instantiate primary model '{primary_gemini}': {e}")
@@ -137,7 +137,7 @@ def get_fallback_llm():
     # 3. Fallback Gemini Models
     for model_name in fallback_geminis:
         try:
-            gemini_model = ChatGoogleGenerativeAI(model=model_name, temperature=0)
+            gemini_model = ChatGoogleGenerativeAI(model=model_name, temperature=0, max_retries=1)
             runnables.append(make_logging_wrapper(gemini_model, model_name))
         except Exception as e:
             print(f"❌ [LLM Setup Error] Could not instantiate fallback model '{model_name}': {e}")
@@ -149,7 +149,7 @@ def get_fallback_llm():
         
     if not runnables:
         # Emergency default fallback if somehow everything failed to instantiate
-        fallback_default = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0)
+        fallback_default = ChatGoogleGenerativeAI(model="gemini-1.5-flash-latest", temperature=0, max_retries=1)
         return make_logging_wrapper(fallback_default, "gemini-1.5-flash-latest")
         
     # Compile with fallbacks
