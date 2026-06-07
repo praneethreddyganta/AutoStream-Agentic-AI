@@ -1,6 +1,9 @@
 # AutoStream Agentic AI: Social-to-Lead Conversational Assistant
 
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://autostream-agentic-ai.streamlit.app/)
+
 Welcome to the **AutoStream Agentic AI** repository. This project is a production-grade, conversational sales and support agent built for the fictional SaaS company **AutoStream** (operating under the ServiceHive/Inflx platform). 
+
 
 The agent utilizes **LangGraph** state machines to orchestrate multi-turn slot-filling lead capture workflows, retrieves real-time pricing and features from a local **FAISS Vector Database** using Retrieval-Augmented Generation (RAG), and features a premium, responsive **Streamlit** user interface designed to replicate modern commercial AI products (like ChatGPT and Claude).
 
