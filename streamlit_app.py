@@ -6,13 +6,15 @@ from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
 
 # Load environment variables
-load_dotenv()
+if os.path.exists(".ignore/.env"):
+    load_dotenv(".ignore/.env")
+else:
+    load_dotenv()
 
-# Inject Streamlit secrets into environment variables for LangChain/Gemini SDKs
-if "GOOGLE_API_KEY" in st.secrets:
-    os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
-if "MODEL_NAME" in st.secrets:
-    os.environ["MODEL_NAME"] = st.secrets["MODEL_NAME"]
+# Inject Streamlit secrets into environment variables for LangChain & fallback LLM SDKs
+for key in ["GOOGLE_API_KEY", "MODEL_NAME", "FALLBACK_GEMINI_MODELS", "GROQ_API_KEY", "GROQ_MODEL", "OLLAMA_MODEL", "OLLAMA_BASE_URL"]:
+    if key in st.secrets:
+        os.environ[key] = st.secrets[key]
 
 # Load configured model name
 MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
@@ -187,13 +189,14 @@ def verify_env_key():
 
 @st.cache_resource
 def load_agent_graph():
-    """Initialises ChatGemini, Embeddings, RAG context, and compiles LangGraph StateGraph once."""
-    from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+    """Initialises ChatGemini/Fallbacks, Embeddings, RAG context, and compiles LangGraph StateGraph once."""
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings
     from agent.rag import AutoStreamRAG
     from agent.graph import build_agent_graph
+    from agent.llm import get_fallback_llm
     
-    # Instantiate LLM and Embeddings using Google Gemini API
-    llm = ChatGoogleGenerativeAI(model=MODEL_NAME, temperature=0)
+    # Instantiate the resilient fallback LLM chain
+    llm = get_fallback_llm()
     embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
     
     # Assemble local FAISS RAG index

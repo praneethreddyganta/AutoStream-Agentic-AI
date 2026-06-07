@@ -2,8 +2,11 @@ import os
 import sys
 from dotenv import load_dotenv
 
-# Load environment variables from .env file
-load_dotenv()
+# Load environment variables from .ignore/.env or .env file
+if os.path.exists(".ignore/.env"):
+    load_dotenv(".ignore/.env")
+else:
+    load_dotenv()
 
 def print_banner():
     """
@@ -42,16 +45,16 @@ def main():
     print("⚙️  Initializing AI models and local FAISS vector store. Please wait...")
     
     try:
-        from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+        from langchain_google_genai import GoogleGenerativeAIEmbeddings
         from langchain_core.messages import HumanMessage
         
         from agent.rag import AutoStreamRAG
         from agent.graph import build_agent_graph
+        from agent.llm import get_fallback_llm
         
-        # 1. Initialize core LLM and Embeddings using Google Gemini (FREE tier)
-        model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
-        print(f"  🔹 Step 1/3: Instantiating ChatGemini ({model_name}) and Embeddings...")
-        llm = ChatGoogleGenerativeAI(model=model_name, temperature=0)
+        # 1. Initialize core resilient LLM chain and Embeddings (FREE tier)
+        print("  🔹 Step 1/3: Instantiating resilient Chat LLM chain and Embeddings...")
+        llm = get_fallback_llm()
         embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
         
         # 2. Build local RAG Knowledge Base
