@@ -106,8 +106,14 @@ def get_fallback_llm():
     """
     Constructs and returns the resilient LLM pipeline.
     If GROQ_API_KEY is present, Groq/Llama is inserted as the 2nd model (after primary Gemini 2.5).
+    Allows using different API keys for fallbacks to avoid single-key quota blocking.
     """
     from langchain_google_genai import ChatGoogleGenerativeAI
+    
+    # Read keys
+    primary_key = os.getenv("GOOGLE_API_KEY")
+    fallback_key_1 = os.getenv("GOOGLE_API_KEY_FALLBACK_1") or primary_key
+    fallback_key_2 = os.getenv("GOOGLE_API_KEY_FALLBACK_2") or primary_key
     
     # Read settings
     primary_gemini = os.getenv("MODEL_NAME", "gemini-2.5-flash")
@@ -122,9 +128,9 @@ def get_fallback_llm():
     
     runnables = []
     
-    # 1. Primary Gemini
+    # 1. Primary Gemini (Uses main API key)
     try:
-        gemini_model = ChatGoogleGenerativeAI(model=primary_gemini, temperature=0, max_retries=1)
+        gemini_model = ChatGoogleGenerativeAI(model=primary_gemini, google_api_key=primary_key, temperature=0, max_retries=1)
         runnables.append(make_logging_wrapper(gemini_model, primary_gemini))
     except Exception as e:
         print(f"❌ [LLM Setup Error] Could not instantiate primary model '{primary_gemini}': {e}")
@@ -134,10 +140,12 @@ def get_fallback_llm():
         groq_model_instance = CustomGroqModel(api_key=groq_api_key, model_name=groq_model)
         runnables.append(make_logging_wrapper(groq_model_instance, f"groq:{groq_model}"))
         
-    # 3. Fallback Gemini Models
-    for model_name in fallback_geminis:
+    # 3. Fallback Gemini Models (Rotate fallback API keys)
+    for i, model_name in enumerate(fallback_geminis):
         try:
-            gemini_model = ChatGoogleGenerativeAI(model=model_name, temperature=0, max_retries=1)
+            # Cycle keys: 1st fallback model gets fallback_key_1, subsequent models get fallback_key_2
+            key_to_use = fallback_key_1 if i == 0 else fallback_key_2
+            gemini_model = ChatGoogleGenerativeAI(model=model_name, google_api_key=key_to_use, temperature=0, max_retries=1)
             runnables.append(make_logging_wrapper(gemini_model, model_name))
         except Exception as e:
             print(f"❌ [LLM Setup Error] Could not instantiate fallback model '{model_name}': {e}")

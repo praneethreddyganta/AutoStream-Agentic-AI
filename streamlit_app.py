@@ -12,7 +12,7 @@ else:
     load_dotenv()
 
 # Inject Streamlit secrets into environment variables for LangChain & fallback LLM SDKs
-for key in ["GOOGLE_API_KEY", "MODEL_NAME", "FALLBACK_GEMINI_MODELS", "GROQ_API_KEY", "GROQ_MODEL", "OLLAMA_MODEL", "OLLAMA_BASE_URL"]:
+for key in ["GOOGLE_API_KEY", "GOOGLE_API_KEY_FALLBACK_1", "GOOGLE_API_KEY_FALLBACK_2", "MODEL_NAME", "FALLBACK_GEMINI_MODELS", "GROQ_API_KEY", "GROQ_MODEL", "OLLAMA_MODEL", "OLLAMA_BASE_URL"]:
     if key in st.secrets:
         os.environ[key] = st.secrets[key]
 
@@ -413,11 +413,10 @@ if user_query:
     with st.spinner("Processing..."):
         try:
             compiled_graph.invoke(state_input, graph_config)
+            # Only refresh screen to render latest state if execution succeeded
+            st.rerun()
         except Exception as e:
             st.error(f"Conversation execution error: {e}")
-            
-    # Refresh to render latest assistant state and response
-    st.rerun()
 
 # Dynamic bottom footer information
 st.markdown(f"""
