@@ -166,6 +166,14 @@ st.markdown("""
 
 def verify_env_key():
     """Checks if GOOGLE_API_KEY is available."""
+    st.sidebar.write("🔍 **Debug Info:**")
+    st.sidebar.write("- `st.secrets` keys:", list(st.secrets.keys()))
+    st.sidebar.write("- `os.environ` has key:", "GOOGLE_API_KEY" in os.environ)
+    if "GOOGLE_API_KEY" in os.environ:
+        val = os.environ["GOOGLE_API_KEY"]
+        st.sidebar.write("- Key length:", len(val))
+        st.sidebar.write("- Key prefix:", val[:6] if val else "None")
+    
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key or api_key.strip() == "" or "your_google_ai_studio" in api_key:
         return False
