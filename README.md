@@ -2,6 +2,8 @@
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://autostream-agentic-ai.streamlit.app/)
 
+🚀 **Live App Link:** [https://autostream-agentic-ai.streamlit.app/](https://autostream-agentic-ai.streamlit.app/)
+
 Welcome to the **AutoStream Agentic AI** repository. This project is a production-grade, conversational sales and support agent built for the fictional SaaS company **AutoStream** (operating under the ServiceHive/Inflx platform). 
 
 
@@ -84,7 +86,6 @@ AutoStream-Agentic-AI/
 ├── requirements.txt           # Python Package Dependencies
 ├── .gitignore                 # Files excluded from Git
 ├── .env.example               # Environment Variables template
-├── README.md                  # Comprehensive documentation and setup guide
 │
 ├── agent/                     # Core Agent Module
 │   ├── __init__.py
@@ -94,8 +95,11 @@ AutoStream-Agentic-AI/
 │   ├── state.py               # TypedDict schema definition for Agent State
 │   └── tools.py               # Mock CRM API Lead Capture function
 │
-└── data/                      # Local Knowledge Base
-    └── knowledge_base.md      # AutoStream pricing tiers, features, and policies
+├── data/                      # Local Knowledge Base
+│   └── knowledge_base.md      # AutoStream pricing tiers, features, and policies
+│
+└── README.md                  # Comprehensive documentation and setup guide
+
 ```
 
 ---
