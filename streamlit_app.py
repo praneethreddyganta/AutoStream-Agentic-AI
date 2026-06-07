@@ -187,7 +187,6 @@ def verify_env_key():
         return False
     return True
 
-@st.cache_resource
 def load_agent_graph():
     """Initialises ChatGemini/Fallbacks, Embeddings, RAG context, and compiles LangGraph StateGraph once."""
     from langchain_google_genai import GoogleGenerativeAIEmbeddings
