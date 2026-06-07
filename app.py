@@ -16,7 +16,7 @@ def print_banner():
  Welcome to AutoStream's interactive terminal chatbot!
  
  Intern Assignment Project (ServiceHive - Inflx - Social-to-Lead)
- Powered by: LangGraph, LangChain, FAISS, and Gemini 1.5 Flash
+ Powered by: LangGraph, LangChain, FAISS, and Gemini 2.5 Flash
  
  Type your messages below. Type 'exit' or 'quit' to end the chat.
 ======================================================================

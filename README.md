@@ -38,12 +38,14 @@ graph TD
     Router -- "High-Intent Lead" --> Qualifier[Lead Slot Extraction Node]
     
     Qualifier --> Complete{All Slots Filled?}
-    Complete -- "No" --> END([End Turn / Wait for Input])
+    Complete -- "No" --> User
     Complete -- "Yes" --> Tool[Tool Execution Node]
     
-    Tool --> END
+    Tool --> END([End Turn / Wait for Input])
     RAG --> END
     ResponseGen --> END
+    
+    END -.->|Restores Memory via thread_id| User
 ```
 
 ---
