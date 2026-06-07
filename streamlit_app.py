@@ -144,6 +144,20 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
     }
     
+    /* Explicit Streamlit button overrides for Light/Dark mode compatibility */
+    div.stButton > button {
+        background-color: rgba(255, 255, 255, 0.05) !important;
+        color: #ffffff !important;
+        border: 1px solid rgba(255, 255, 255, 0.15) !important;
+        border-radius: 8px !important;
+        transition: all 0.3s ease !important;
+    }
+    div.stButton > button:hover {
+        background-color: rgba(59, 130, 246, 0.2) !important;
+        border-color: rgba(59, 130, 246, 0.5) !important;
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.2) !important;
+    }
+    
     /* Scrollbars customization */
     ::-webkit-scrollbar {
         width: 6px;
@@ -166,14 +180,6 @@ st.markdown("""
 
 def verify_env_key():
     """Checks if GOOGLE_API_KEY is available."""
-    st.sidebar.write("🔍 **Debug Info:**")
-    st.sidebar.write("- `st.secrets` keys:", list(st.secrets.keys()))
-    st.sidebar.write("- `os.environ` has key:", "GOOGLE_API_KEY" in os.environ)
-    if "GOOGLE_API_KEY" in os.environ:
-        val = os.environ["GOOGLE_API_KEY"]
-        st.sidebar.write("- Key length:", len(val))
-        st.sidebar.write("- Key prefix:", val[:6] if val else "None")
-    
     api_key = os.getenv("GOOGLE_API_KEY")
     if not api_key or api_key.strip() == "" or "your_google_ai_studio" in api_key:
         return False
@@ -400,8 +406,8 @@ if user_query:
     st.rerun()
 
 # Dynamic bottom footer information
-st.markdown("""
+st.markdown(f"""
 <div style="text-align: center; font-size: 0.75rem; color: #4b5563; margin-top: 50px; padding-bottom: 20px;">
-    AutoStream CRM & Interactive Assistant • Powered by LangGraph + FAISS + Gemini 1.5 Flash
+    AutoStream CRM & Interactive Assistant • Powered by LangGraph + FAISS + {MODEL_NAME}
 </div>
 """, unsafe_allow_html=True)
