@@ -8,6 +8,12 @@ from langchain_core.messages import AIMessage, HumanMessage
 # Load environment variables
 load_dotenv()
 
+# Inject Streamlit secrets into environment variables for LangChain/Gemini SDKs
+if "GOOGLE_API_KEY" in st.secrets:
+    os.environ["GOOGLE_API_KEY"] = st.secrets["GOOGLE_API_KEY"]
+if "MODEL_NAME" in st.secrets:
+    os.environ["MODEL_NAME"] = st.secrets["MODEL_NAME"]
+
 # Load configured model name
 MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
