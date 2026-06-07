@@ -187,7 +187,8 @@ def verify_env_key():
         return False
     return True
 
-def load_agent_graph():
+@st.cache_resource
+def load_cached_agent_graph(google_api_key, groq_api_key, model_name, fallback_keys_str):
     """Initialises ChatGemini/Fallbacks, Embeddings, RAG context, and compiles LangGraph StateGraph once."""
     from langchain_google_genai import GoogleGenerativeAIEmbeddings
     from agent.rag import AutoStreamRAG
@@ -196,7 +197,8 @@ def load_agent_graph():
     
     # Instantiate the resilient fallback LLM chain
     llm = get_fallback_llm()
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+    # Explicitly pass api key to embeddings to ensure it uses the correct active key
+    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=google_api_key)
     
     # Assemble local FAISS RAG index
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -226,9 +228,17 @@ if not verify_env_key():
     )
     st.stop()
 
+# Gather all config variables to serve as cache dependencies
+google_key = os.getenv("GOOGLE_API_KEY", "")
+groq_key = os.getenv("GROQ_API_KEY", "")
+fallback_1 = os.getenv("GOOGLE_API_KEY_FALLBACK_1", "")
+fallback_2 = os.getenv("GOOGLE_API_KEY_FALLBACK_2", "")
+model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+fallback_str = f"{fallback_1}-{fallback_2}"
+
 # Load the compiled LangGraph agent
 try:
-    compiled_graph = load_agent_graph()
+    compiled_graph = load_cached_agent_graph(google_key, groq_key, model_name, fallback_str)
 except Exception as e:
     st.error(f"Failed to compile LangGraph state machine: {e}")
     st.stop()
