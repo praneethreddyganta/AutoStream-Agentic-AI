@@ -301,7 +301,18 @@ with st.sidebar:
     st.markdown('### ⚙️ Session details')
     with st.container(border=True):
         st.markdown(f"**Session ID:** `{st.session_state.thread_id[:8]}...`")
-        st.markdown(f"**Model:** `{MODEL_NAME}`")
+        st.markdown(f"**Primary Model:** `{MODEL_NAME}`")
+        
+        # Display Fallback engine statuses
+        if os.getenv("GROQ_API_KEY"):
+            st.markdown("⚡ **Groq Backup:** `🟢 ACTIVE (Llama)`")
+        else:
+            st.markdown("⚡ **Groq Backup:** `⚪ OFFLINE`")
+            
+        if os.getenv("OLLAMA_MODEL"):
+            st.markdown("🖥️ **Ollama Backup:** `🟢 ACTIVE`")
+            
+        st.markdown("🔗 **Fallback Chain:** `🟢 ENABLED`")
         
         # Clear Conversation / Reset Session button
         if st.button("Reset Conversation", use_container_width=True, type="secondary"):
@@ -411,6 +422,6 @@ if user_query:
 # Dynamic bottom footer information
 st.markdown(f"""
 <div style="text-align: center; font-size: 0.75rem; color: #4b5563; margin-top: 50px; padding-bottom: 20px;">
-    AutoStream CRM & Interactive Assistant • Powered by LangGraph + FAISS + {MODEL_NAME}
+    AutoStream CRM & Interactive Assistant • Powered by LangGraph + FAISS + Resilient Fallback Engine
 </div>
 """, unsafe_allow_html=True)
