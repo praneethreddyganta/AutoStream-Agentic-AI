@@ -12,12 +12,12 @@ else:
     load_dotenv()
 
 # Inject Streamlit secrets into environment variables for LangChain & fallback LLM SDKs
-for key in ["GOOGLE_API_KEY", "GOOGLE_API_KEY_FALLBACK_1", "GOOGLE_API_KEY_FALLBACK_2", "MODEL_NAME", "FALLBACK_GEMINI_MODELS", "GROQ_API_KEY", "GROQ_MODEL", "OLLAMA_MODEL", "OLLAMA_BASE_URL"]:
+for key in ["GOOGLE_API_KEY", "MODEL_NAME", "GROQ_API_KEY", "GROQ_MODEL"]:
     if key in st.secrets:
         os.environ[key] = st.secrets[key]
 
 # Load configured model name
-MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-3.5-flash-lite")
 
 # Set up Streamlit Page configuration
 st.set_page_config(
@@ -188,15 +188,19 @@ def verify_env_key():
     return True
 
 @st.cache_resource
-def load_cached_agent_graph(google_api_key, groq_api_key, model_name, fallback_keys_str):
-    """Initialises ChatGemini/Fallbacks, Embeddings, RAG context, and compiles LangGraph StateGraph once."""
+def load_cached_agent_graph(google_api_key, groq_api_key, model_name):
+    """Initialises Gemini with Groq fallback, embeddings, RAG, and the LangGraph once."""
     from langchain_google_genai import GoogleGenerativeAIEmbeddings
     from agent.rag import AutoStreamRAG
     from agent.graph import build_agent_graph
     from agent.llm import get_fallback_llm
     
     # Instantiate the resilient fallback LLM chain
-    llm = get_fallback_llm()
+    llm = get_fallback_llm(
+        primary_api_key=google_api_key,
+        groq_api_key=groq_api_key,
+        primary_model=model_name,
+    )
     # Explicitly pass api key to embeddings to ensure it uses the correct active key
     embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=google_api_key)
     
@@ -231,14 +235,11 @@ if not verify_env_key():
 # Gather all config variables to serve as cache dependencies
 google_key = os.getenv("GOOGLE_API_KEY", "")
 groq_key = os.getenv("GROQ_API_KEY", "")
-fallback_1 = os.getenv("GOOGLE_API_KEY_FALLBACK_1", "")
-fallback_2 = os.getenv("GOOGLE_API_KEY_FALLBACK_2", "")
-model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
-fallback_str = f"{fallback_1}-{fallback_2}"
+model_name = os.getenv("MODEL_NAME", "gemini-3.5-flash-lite")
 
 # Load the compiled LangGraph agent
 try:
-    compiled_graph = load_cached_agent_graph(google_key, groq_key, model_name, fallback_str)
+    compiled_graph = load_cached_agent_graph(google_key, groq_key, model_name)
 except Exception as e:
     st.error(f"Failed to compile LangGraph state machine: {e}")
     st.stop()
@@ -314,14 +315,11 @@ with st.sidebar:
         
         # Display Fallback engine statuses
         if os.getenv("GROQ_API_KEY"):
-            st.markdown("⚡ **Groq Backup:** `🟢 ACTIVE (Llama)`")
+            st.markdown("⚡ **Groq Backup:** `🟢 ACTIVE (GPT-OSS 20B)`")
         else:
             st.markdown("⚡ **Groq Backup:** `⚪ OFFLINE`")
             
-        if os.getenv("OLLAMA_MODEL"):
-            st.markdown("🖥️ **Ollama Backup:** `🟢 ACTIVE`")
-            
-        st.markdown("🔗 **Fallback Chain:** `🟢 ENABLED`")
+        st.markdown("🔗 **Fallback Chain:** `🟢 ENABLED`" if os.getenv("GROQ_API_KEY") else "🔗 **Fallback Chain:** `⚠️ NO FALLBACK KEY`")
         
         # Clear Conversation / Reset Session button
         if st.button("Reset Conversation", use_container_width=True, type="secondary"):
