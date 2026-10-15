@@ -225,10 +225,11 @@ graph_config = {"configurable": {"thread_id": f"autostream-web-{st.session_state
 if not verify_env_key():
     st.error("🔑 Google Gemini API Key Missing")
     st.info(
-        "AutoStream Agent requires a valid `GOOGLE_API_KEY` to be set in your `.env` file or environment secrets.\n\n"
+        "AutoStream requires `GOOGLE_API_KEY` for Gemini and `GROQ_API_KEY` for fallback when Gemini is rate-limited or unavailable.\n\n"
         "1. Create a `.env` file in the root folder.\n"
-        "2. Add your Gemini key: `GOOGLE_API_KEY=AIzaSy...`\n"
-        "3. Restart the Streamlit application."
+        "2. Add `GOOGLE_API_KEY=...` and `GROQ_API_KEY=...`.\n"
+        "3. Set `MODEL_NAME=gemini-3.5-flash-lite` and `GROQ_MODEL=openai/gpt-oss-20b`.\n"
+        "4. Restart the Streamlit application."
     )
     st.stop()
 
