@@ -58,7 +58,7 @@ graph TD
 ## ✨ Features
 
 - **LangGraph State Graph**: Models the entire conversational flow as a state machine with persistent session checkpointer memory.
-- **Gemini 2.5 Flash Integration**: Powered by Google Gemini API for fast, reliable intent classification and natural response generation.
+- **Gemini Flash-Lite + Groq Fallback**: Gemini `gemini-3.5-flash-lite` is the primary model; Groq `openai/gpt-oss-20b` is used only when a Gemini call fails.
 - **FAISS Vector Store RAG**: Performs semantic search over local markdown documents using Google Text Embeddings for pricing and policy queries.
 - **Structured Lead Slot-Filling**: Dynamically tracks and extracts parameters progressively over multiple turns.
 - **Mock CRM Integration**: Automatically executes backend mock lead capture tools upon slot completion.
@@ -71,7 +71,7 @@ graph TD
 - **Core Logic**: Python 3.11
 - **Orchestration**: LangGraph, LangChain Core
 - **Vector Search**: FAISS (Facebook AI Similarity Search)
-- **AI Models**: Google Gemini 2.5 Flash, Google Text Embeddings (`models/gemini-embedding-001`)
+- **AI Models**: Google Gemini 3.5 Flash-Lite (primary), Groq GPT-OSS 20B (fallback), Google Text Embeddings (`models/gemini-embedding-001`)
 - **Dashboard Interface**: Streamlit
 
 ---
@@ -108,7 +108,8 @@ AutoStream-Agentic-AI/
 
 ### Prerequisites
 - Python 3.11 or 3.12 installed
-- A **Google Gemini API Key** (Get a free developer key from [Google AI Studio](https://aistudio.google.com/))
+- A **Google Gemini API key** from [Google AI Studio](https://aistudio.google.com/)
+- A **Groq API key** from [Groq Console](https://console.groq.com/) for fallback behavior
 
 ### 1. Clone & Navigate
 ```bash
@@ -136,6 +137,9 @@ cp .env.example .env
 Open `.env` and paste your Gemini API key:
 ```env
 GOOGLE_API_KEY=AIzaSyYourActualGoogleGeminiKeyHere
+GROQ_API_KEY=your_groq_api_key_here
+GROQ_MODEL=openai/gpt-oss-20b
+MODEL_NAME=gemini-3.5-flash-lite
 ```
 
 ### 5. Running the Application
@@ -163,6 +167,9 @@ To deploy this application to **Streamlit Community Cloud** for production acces
 4. Click **Advanced settings** before deploying. Under the **Secrets** section, configure your environment variables:
    ```toml
    GOOGLE_API_KEY = "AIzaSyYourActualGoogleGeminiKeyHere"
+   GROQ_API_KEY = "your_groq_api_key_here"
+   GROQ_MODEL = "openai/gpt-oss-20b"
+   MODEL_NAME = "gemini-3.5-flash-lite"
    ```
 5. Click **Save** and then **Deploy**. Your app will be live on the web in seconds!
 
