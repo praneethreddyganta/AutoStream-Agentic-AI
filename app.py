@@ -19,7 +19,7 @@ def print_banner():
  Welcome to AutoStream's interactive terminal chatbot!
  
  Intern Assignment Project (ServiceHive - Inflx - Social-to-Lead)
- Powered by: LangGraph, LangChain, FAISS, and Gemini 2.5 Flash
+ Powered by: LangGraph, LangChain, FAISS, Gemini Flash-Lite + Groq GPT-OSS 20B fallback
  
  Type your messages below. Type 'exit' or 'quit' to end the chat.
 ======================================================================
@@ -52,8 +52,8 @@ def main():
         from agent.graph import build_agent_graph
         from agent.llm import get_fallback_llm
         
-        # 1. Initialize core resilient LLM chain and Embeddings (FREE tier)
-        print("  🔹 Step 1/3: Instantiating resilient Chat LLM chain and Embeddings...")
+        # 1. Initialize Gemini primary / Groq fallback chain and embeddings
+        print("  🔹 Step 1/3: Instantiating Gemini Flash-Lite / Groq GPT-OSS 20B chain and embeddings...")
         llm = get_fallback_llm()
         embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
         
