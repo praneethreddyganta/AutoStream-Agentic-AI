@@ -12,9 +12,9 @@ from agent.rag import AutoStreamRAG
 from agent.graph import build_agent_graph
 from agent.llm import get_fallback_llm
 
-# Initialize LLM and Embeddings using fallback LLM chain
+# Initialize LLM and Embeddings using fallback LLM chain (Gemini 3.5 Flash-Lite / Groq GPT-OSS 20B)
 llm = get_fallback_llm()
-embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+embeddings = GoogleGenerativeAIEmbeddings(model=os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-2"))
 
 script_dir = os.path.dirname(os.path.abspath(__file__))
 kb_path = os.path.join(script_dir, "data", "knowledge_base.md")

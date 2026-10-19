@@ -19,7 +19,7 @@ def print_banner():
  Welcome to AutoStream's interactive terminal chatbot!
  
  Intern Assignment Project (ServiceHive - Inflx - Social-to-Lead)
- Powered by: LangGraph, LangChain, FAISS, and Gemini 2.5 Flash
+ Powered by: LangGraph, LangChain, FAISS, Gemini 3.5 Flash-Lite & Groq GPT-OSS 20B
  
  Type your messages below. Type 'exit' or 'quit' to end the chat.
 ======================================================================
@@ -52,10 +52,10 @@ def main():
         from agent.graph import build_agent_graph
         from agent.llm import get_fallback_llm
         
-        # 1. Initialize core resilient LLM chain and Embeddings (FREE tier)
+        # 1. Initialize core resilient LLM chain and Embeddings (Primary: Gemini 3.5 Flash-Lite, Fallback: Groq GPT-OSS 20B)
         print("  🔹 Step 1/3: Instantiating resilient Chat LLM chain and Embeddings...")
         llm = get_fallback_llm()
-        embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+        embeddings = GoogleGenerativeAIEmbeddings(model=os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-2"))
         
         # 2. Build local RAG Knowledge Base
         print("  🔹 Step 2/3: Loading local markdown and generating FAISS vector index (via Google API)...")
@@ -95,7 +95,11 @@ def main():
             }
             
             # Execute step of graph
-            state_output = compiled_graph.invoke(state_input, config)
+            try:
+                state_output = compiled_graph.invoke(state_input, config)
+            except Exception as e:
+                print("\nBot: We are currently experiencing very high demand and our service limit has been reached. Please visit us again a little later, and we will be delighted to assist you. Thank you for your patience and understanding!\n")
+                continue
             
             # Print diagnostic internal state markers (Sleek agentic debugger)
             intent = state_output.get("current_intent", "Unknown")

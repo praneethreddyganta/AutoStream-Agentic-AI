@@ -170,14 +170,15 @@ def verify_env_key():
 
 @st.cache_resource
 def load_agent_graph():
-    """Initialises ChatGemini, Embeddings, RAG context, and compiles LangGraph StateGraph once."""
-    from langchain_google_genai import ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings
+    """Initialises resilient LLM (Gemini 3.5 Flash-Lite / Groq GPT-OSS 20B), Embeddings, RAG context, and compiles LangGraph StateGraph once."""
+    from langchain_google_genai import GoogleGenerativeAIEmbeddings
     from agent.rag import AutoStreamRAG
     from agent.graph import build_agent_graph
+    from agent.llm import get_fallback_llm
     
-    # Instantiate LLM and Embeddings using Google Gemini API
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", temperature=0)
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001")
+    # Instantiate LLM and Embeddings
+    llm = get_fallback_llm()
+    embeddings = GoogleGenerativeAIEmbeddings(model=os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-2"))
     
     # Assemble local FAISS RAG index
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -267,7 +268,12 @@ with st.sidebar:
     st.markdown('### ⚙️ Session details')
     with st.container(border=True):
         st.markdown(f"**Session ID:** `{st.session_state.thread_id[:8]}...`")
-        st.markdown(f"**Model:** `gemini-2.5-flash`")
+        st.markdown(f"**Primary Model:** `{os.getenv('MODEL_NAME', 'gemini-3.5-flash-lite')}`")
+        if os.getenv("GROQ_API_KEY"):
+            st.markdown(f"**Groq Fallback:** `🟢 ACTIVE (GPT-OSS 20B)`")
+        else:
+            st.markdown(f"**Groq Fallback:** `⚪ OFFLINE`")
+        st.markdown(f"**Embedding Model:** `{os.getenv('EMBEDDING_MODEL', 'models/gemini-embedding-2')}`")
         st.markdown(f"**Knowledge Index:** `FAISS (Local)`")
         
         # Clear Conversation / Reset Session button
@@ -370,7 +376,11 @@ if user_query:
         try:
             compiled_graph.invoke(state_input, graph_config)
         except Exception as e:
-            st.error(f"Conversation execution error: {e}")
+            st.info(
+                "⏳ **Notice:** We are currently experiencing very high demand and our service limit has been reached. "
+                "Please visit us again a little later, and we will be delighted to assist you. "
+                "Thank you for your patience and understanding!"
+            )
             
     # Refresh to render latest assistant state and response
     st.rerun()
@@ -378,6 +388,6 @@ if user_query:
 # Dynamic bottom footer information
 st.markdown("""
 <div style="text-align: center; font-size: 0.75rem; color: #4b5563; margin-top: 50px; padding-bottom: 20px;">
-    AutoStream CRM & Interactive Assistant • Powered by LangGraph + FAISS + Gemini 1.5 Flash
+    AutoStream CRM & Interactive Assistant • Powered by LangGraph + FAISS + Gemini 3.5 Flash-Lite & Groq GPT-OSS 20B
 </div>
 """, unsafe_allow_html=True)

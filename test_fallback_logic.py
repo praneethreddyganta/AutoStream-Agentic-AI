@@ -9,7 +9,7 @@ else:
 
 from langchain_core.messages import AIMessage, HumanMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
-from agent.llm import get_fallback_llm, make_logging_wrapper
+from agent.llm import get_fallback_llm, make_logging_wrapper, GracefulLimitExceededFallback
 
 class FailingModel:
     def __init__(self, name):
@@ -30,23 +30,39 @@ def test_fallback_flow():
     print("🧪 RUNNING MULTI-LLM FALLBACK FLOW DIAGNOSTICS")
     print("==================================================")
     
-    # 1. Create a chain where the first 2 models fail and the 3rd succeeds
-    model1 = make_logging_wrapper(FailingModel("primary-gemini-2.5"), "primary-gemini-2.5")
-    model2 = make_logging_wrapper(FailingModel("backup-groq"), "backup-groq")
-    model3 = make_logging_wrapper(SucceedingModel("backup-gemini-2.0"), "backup-gemini-2.0")
+    # 1. Create a chain where primary fails and fallback succeeds
+    model1 = make_logging_wrapper(FailingModel("primary-gemini-3.5-flash-lite"), "primary-gemini-3.5-flash-lite")
+    model2 = make_logging_wrapper(SucceedingModel("fallback-groq-gpt-oss-20b"), "fallback-groq-gpt-oss-20b")
     
     print("\n--- Compiling Mock Fallback Chain ---")
-    fallback_chain = model1.with_fallbacks([model2, model3])
+    fallback_chain = model1.with_fallbacks([model2])
     
     print("\n--- Invoking Fallback Chain ---")
     try:
         response = fallback_chain.invoke("Hi")
         print("\n🎉 SUCCESS!")
         print("Final Response Content:", response.content)
-        assert "backup-gemini-2.0" in response.content
-        print("Test passed: Seamlessly recovered from 2 failures to get a reply!")
+        assert "fallback-groq-gpt-oss-20b" in response.content
+        print("Test passed: Seamlessly recovered from primary failure to get a reply from Groq fallback!")
     except Exception as e:
         print("\n❌ FAILED:", e)
+        sys.exit(1)
+        
+    # 2. Test when BOTH models reach their limits (Gemini fails + Groq fails)
+    print("\n--- Testing When BOTH Models Reach Limits ---")
+    model_gemini_fail = make_logging_wrapper(FailingModel("primary-gemini-3.5-flash-lite"), "primary-gemini-3.5-flash-lite")
+    model_groq_fail = make_logging_wrapper(FailingModel("fallback-groq-gpt-oss-20b"), "fallback-groq-gpt-oss-20b")
+    model_terminal = make_logging_wrapper(GracefulLimitExceededFallback(), "graceful_limit_reached")
+    
+    both_failed_chain = model_gemini_fail.with_fallbacks([model_groq_fail, model_terminal])
+    try:
+        response_both = both_failed_chain.invoke("Hi")
+        print("\n🎉 SUCCESSFUL GRACEFUL DEGRADATION!")
+        print("Respectful Limit Message:", response_both.content)
+        assert "limit has been reached" in response_both.content
+        print("Test passed: Polite respectful message delivered without throwing an error!")
+    except Exception as e:
+        print("\n❌ FAILED TO DEGRADE GRACEFULLY:", e)
         sys.exit(1)
         
     print("\n--- Testing Live API Setup (without triggering fallbacks unless quota hit) ---")

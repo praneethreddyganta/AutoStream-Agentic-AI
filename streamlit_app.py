@@ -12,12 +12,12 @@ else:
     load_dotenv()
 
 # Inject Streamlit secrets into environment variables for LangChain & fallback LLM SDKs
-for key in ["GOOGLE_API_KEY", "GOOGLE_API_KEY_FALLBACK_1", "GOOGLE_API_KEY_FALLBACK_2", "MODEL_NAME", "FALLBACK_GEMINI_MODELS", "GROQ_API_KEY", "GROQ_MODEL", "OLLAMA_MODEL", "OLLAMA_BASE_URL"]:
+for key in ["GOOGLE_API_KEY", "MODEL_NAME", "GROQ_API_KEY", "GROQ_MODEL", "EMBEDDING_MODEL"]:
     if key in st.secrets:
         os.environ[key] = st.secrets[key]
 
 # Load configured model name
-MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-3.5-flash-lite")
 
 # Set up Streamlit Page configuration
 st.set_page_config(
@@ -188,17 +188,17 @@ def verify_env_key():
     return True
 
 @st.cache_resource
-def load_cached_agent_graph(google_api_key, groq_api_key, model_name, fallback_keys_str):
+def load_cached_agent_graph(google_api_key, groq_api_key, model_name, embedding_model):
     """Initialises ChatGemini/Fallbacks, Embeddings, RAG context, and compiles LangGraph StateGraph once."""
     from langchain_google_genai import GoogleGenerativeAIEmbeddings
     from agent.rag import AutoStreamRAG
     from agent.graph import build_agent_graph
     from agent.llm import get_fallback_llm
     
-    # Instantiate the resilient fallback LLM chain
+    # Instantiate the resilient fallback LLM chain (Primary: Gemini 3.5 Flash-Lite, Fallback: Groq GPT-OSS 20B)
     llm = get_fallback_llm()
     # Explicitly pass api key to embeddings to ensure it uses the correct active key
-    embeddings = GoogleGenerativeAIEmbeddings(model="models/gemini-embedding-001", google_api_key=google_api_key)
+    embeddings = GoogleGenerativeAIEmbeddings(model=embedding_model, google_api_key=google_api_key)
     
     # Assemble local FAISS RAG index
     script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -231,14 +231,12 @@ if not verify_env_key():
 # Gather all config variables to serve as cache dependencies
 google_key = os.getenv("GOOGLE_API_KEY", "")
 groq_key = os.getenv("GROQ_API_KEY", "")
-fallback_1 = os.getenv("GOOGLE_API_KEY_FALLBACK_1", "")
-fallback_2 = os.getenv("GOOGLE_API_KEY_FALLBACK_2", "")
-model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
-fallback_str = f"{fallback_1}-{fallback_2}"
+model_name = os.getenv("MODEL_NAME", "gemini-3.5-flash-lite")
+embedding_model = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-2")
 
 # Load the compiled LangGraph agent
 try:
-    compiled_graph = load_cached_agent_graph(google_key, groq_key, model_name, fallback_str)
+    compiled_graph = load_cached_agent_graph(google_key, groq_key, model_name, embedding_model)
 except Exception as e:
     st.error(f"Failed to compile LangGraph state machine: {e}")
     st.stop()
@@ -310,17 +308,15 @@ with st.sidebar:
     st.markdown('### ⚙️ Session details')
     with st.container(border=True):
         st.markdown(f"**Session ID:** `{st.session_state.thread_id[:8]}...`")
-        st.markdown(f"**Primary Model:** `{MODEL_NAME}`")
+        st.markdown(f"**Primary Model:** `{MODEL_NAME}` (Gemini 3.5 Flash-Lite)")
         
         # Display Fallback engine statuses
         if os.getenv("GROQ_API_KEY"):
-            st.markdown("⚡ **Groq Backup:** `🟢 ACTIVE (Llama)`")
+            st.markdown(f"⚡ **Groq Fallback:** `🟢 ACTIVE ({os.getenv('GROQ_MODEL', 'gpt-oss-20b')})`")
         else:
-            st.markdown("⚡ **Groq Backup:** `⚪ OFFLINE`")
+            st.markdown("⚡ **Groq Fallback:** `⚪ OFFLINE (Requires GROQ_API_KEY)`")
             
-        if os.getenv("OLLAMA_MODEL"):
-            st.markdown("🖥️ **Ollama Backup:** `🟢 ACTIVE`")
-            
+        st.markdown(f"🧠 **Embedding Model:** `{embedding_model}`")
         st.markdown("🔗 **Fallback Chain:** `🟢 ENABLED`")
         
         # Clear Conversation / Reset Session button
@@ -425,7 +421,11 @@ if user_query:
             # Only refresh screen to render latest state if execution succeeded
             st.rerun()
         except Exception as e:
-            st.error(f"Conversation execution error: {e}")
+            st.info(
+                "⏳ **Notice:** We are currently experiencing very high demand and our service limit has been reached. "
+                "Please visit us again a little later, and we will be delighted to assist you. "
+                "Thank you for your patience and understanding!"
+            )
 
 # Dynamic bottom footer information
 st.markdown(f"""

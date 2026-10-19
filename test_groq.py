@@ -18,8 +18,13 @@ headers = {
     "Authorization": f"Bearer {groq_key}",
     "Content-Type": "application/json"
 }
+groq_model = os.getenv("GROQ_MODEL", "openai/gpt-oss-20b")
+if groq_model in ["gpt-oss-20b", "gpt-oss-120b"]:
+    groq_model = f"openai/{groq_model}"
+print("Groq Model:", groq_model)
+
 payload = {
-    "model": "llama-3.1-8b-instant",
+    "model": groq_model,
     "messages": [{"role": "user", "content": "Hi"}],
     "temperature": 0
 }

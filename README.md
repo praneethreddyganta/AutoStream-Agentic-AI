@@ -58,8 +58,9 @@ graph TD
 ## ✨ Features
 
 - **LangGraph State Graph**: Models the entire conversational flow as a state machine with persistent session checkpointer memory.
-- **Gemini 2.5 Flash Integration**: Powered by Google Gemini API for fast, reliable intent classification and natural response generation.
-- **FAISS Vector Store RAG**: Performs semantic search over local markdown documents using Google Text Embeddings for pricing and policy queries.
+- **Gemini 3.5 Flash-Lite Integration**: Powered by Google Gemini 3.5 Flash-Lite for ultra-fast, cost-effective intent classification and response generation.
+- **Groq GPT-OSS 20B Fallback Engine**: High-throughput fallback model via Groq Cloud ensuring zero-downtime availability.
+- **FAISS Vector Store RAG**: Performs semantic search over local markdown documents using Google Gemini Embedding 2 (`models/gemini-embedding-2`) for pricing and policy queries.
 - **Structured Lead Slot-Filling**: Dynamically tracks and extracts parameters progressively over multiple turns.
 - **Mock CRM Integration**: Automatically executes backend mock lead capture tools upon slot completion.
 - **Premium Streamlit UI**: Modern dark theme with custom glassmorphic cards, linear progress bars, active intent badges, and visual RAG retrieval status indicators.
@@ -71,7 +72,9 @@ graph TD
 - **Core Logic**: Python 3.11
 - **Orchestration**: LangGraph, LangChain Core
 - **Vector Search**: FAISS (Facebook AI Similarity Search)
-- **AI Models**: Google Gemini 2.5 Flash, Google Text Embeddings (`models/gemini-embedding-001`)
+- **Primary LLM**: Google Gemini 3.5 Flash-Lite
+- **Fallback LLM**: Groq GPT-OSS 20B
+- **Embedding Model**: Google Gemini Embedding 2 (`models/gemini-embedding-2`)
 - **Dashboard Interface**: Streamlit
 
 ---
@@ -91,6 +94,7 @@ AutoStream-Agentic-AI/
 │   ├── __init__.py
 │   ├── graph.py               # LangGraph StateGraph state machine structure
 │   ├── intents.py             # LLM Intent classification node logic
+│   ├── llm.py                 # Resilient LLM setup (Gemini 3.5 Flash-Lite + Groq GPT-OSS 20B)
 │   ├── rag.py                 # FAISS Loader and semantic retrieval helper
 │   ├── state.py               # TypedDict schema definition for Agent State
 │   └── tools.py               # Mock CRM API Lead Capture function
@@ -109,6 +113,7 @@ AutoStream-Agentic-AI/
 ### Prerequisites
 - Python 3.11 or 3.12 installed
 - A **Google Gemini API Key** (Get a free developer key from [Google AI Studio](https://aistudio.google.com/))
+- *(Optional but recommended)* A **Groq API Key** for GPT-OSS 20B fallback (Get from [Groq Console](https://console.groq.com/))
 
 ### 1. Clone & Navigate
 ```bash
@@ -133,9 +138,13 @@ Copy the environment template:
 ```bash
 cp .env.example .env
 ```
-Open `.env` and paste your Gemini API key:
+Open `.env` and configure your keys:
 ```env
 GOOGLE_API_KEY=AIzaSyYourActualGoogleGeminiKeyHere
+MODEL_NAME=gemini-3.5-flash-lite
+GROQ_API_KEY=gsk_YourActualGroqKeyHere
+GROQ_MODEL=gpt-oss-20b
+EMBEDDING_MODEL=models/gemini-embedding-2
 ```
 
 ### 5. Running the Application
@@ -163,6 +172,10 @@ To deploy this application to **Streamlit Community Cloud** for production acces
 4. Click **Advanced settings** before deploying. Under the **Secrets** section, configure your environment variables:
    ```toml
    GOOGLE_API_KEY = "AIzaSyYourActualGoogleGeminiKeyHere"
+   MODEL_NAME = "gemini-3.5-flash-lite"
+   GROQ_API_KEY = "gsk_YourActualGroqKeyHere"
+   GROQ_MODEL = "gpt-oss-20b"
+   EMBEDDING_MODEL = "models/gemini-embedding-2"
    ```
 5. Click **Save** and then **Deploy**. Your app will be live on the web in seconds!
 

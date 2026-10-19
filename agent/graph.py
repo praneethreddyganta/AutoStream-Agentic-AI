@@ -11,6 +11,7 @@ from agent.state import AgentState
 from agent.intents import classify_intent
 from agent.tools import mock_lead_capture
 from agent.rag import AutoStreamRAG
+from agent.llm import DEFAULT_LIMIT_REACHED_MESSAGE
 from agent.prompts import (
     RAG_SYSTEM_PROMPT,
     LEAD_EXTRACTION_SYSTEM_PROMPT,
@@ -81,12 +82,16 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
             ("placeholder", "{messages}")
         ])
         
-        chain = prompt | llm
-        response = chain.invoke({
-            "context": context,
-            "messages": state["messages"]
-        })
-        
+        try:
+            chain = prompt | llm
+            response = chain.invoke({
+                "context": context,
+                "messages": state["messages"]
+            })
+        except Exception as e:
+            print(f"⚠️ [RAG Node Limit Fallback]: {e}")
+            response = AIMessage(content=DEFAULT_LIMIT_REACHED_MESSAGE)
+            
         return {"messages": [response]}
 
     def lead_qualifier_node(state: AgentState):
@@ -202,8 +207,12 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
                 ("placeholder", "{messages}")
             ])
             
-        chain = prompt | llm
-        response = chain.invoke({"messages": state["messages"]})
+        try:
+            chain = prompt | llm
+            response = chain.invoke({"messages": state["messages"]})
+        except Exception as e:
+            print(f"⚠️ [Response Gen Limit Fallback]: {e}")
+            response = AIMessage(content=DEFAULT_LIMIT_REACHED_MESSAGE)
         return {"messages": [response]}
 
     # ------------------ Graph Edge Routing ------------------

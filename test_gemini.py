@@ -4,7 +4,7 @@ load_dotenv()
 
 from langchain_google_genai import ChatGoogleGenerativeAI
 
-model_name = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+model_name = os.getenv("MODEL_NAME", "gemini-3.5-flash-lite")
 print("Model name:", model_name)
 print("API Key exists:", "GOOGLE_API_KEY" in os.environ)
 

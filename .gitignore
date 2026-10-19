@@ -18,5 +18,6 @@ env/
 # Streamlit configurations / secrets
 .streamlit/
 
-# macOS system files
+# macOS & IDE system files
 .DS_Store
+.vscode/
