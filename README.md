@@ -60,6 +60,7 @@ graph TD
 - **LangGraph State Graph**: Models the entire conversational flow as a state machine with persistent session checkpointer memory.
 - **Gemini 3.5 Flash-Lite Integration**: Powered by Google Gemini 3.5 Flash-Lite for ultra-fast, cost-effective intent classification and response generation.
 - **Groq GPT-OSS 20B Fallback Engine**: High-throughput fallback model via Groq Cloud ensuring zero-downtime availability.
+- **Graceful Degradation Safeguard**: When both providers reach their usage limits, the system politely notifies users instead of throwing exceptions.
 - **FAISS Vector Store RAG**: Performs semantic search over local markdown documents using Google Gemini Embedding 2 (`models/gemini-embedding-2`) for pricing and policy queries.
 - **Structured Lead Slot-Filling**: Dynamically tracks and extracts parameters progressively over multiple turns.
 - **Mock CRM Integration**: Automatically executes backend mock lead capture tools upon slot completion.
@@ -67,13 +68,22 @@ graph TD
 
 ---
 
+## 🛡️ Resilient Multi-LLM Architecture
+
+AutoStream is built with a 3-tier fallback pipeline:
+1. **Primary**: **Google Gemini 3.5 Flash-Lite** handles primary intent routing and conversation flow.
+2. **Secondary**: **Groq GPT-OSS 20B** automatically takes over within milliseconds if Google reaches rate limits or encounters downtime.
+3. **Terminal**: **Graceful Rate-Limit Notification** returns a courteous notice (*"We are currently experiencing very high demand and our service limit has been reached. Please visit us again a little later..."*) without throwing application errors.
+
+---
+
 ## 🛠️ Tech Stack
 
-- **Core Logic**: Python 3.11
+- **Core Logic**: Python 3.11 / 3.12 / 3.13
 - **Orchestration**: LangGraph, LangChain Core
 - **Vector Search**: FAISS (Facebook AI Similarity Search)
 - **Primary LLM**: Google Gemini 3.5 Flash-Lite
-- **Fallback LLM**: Groq GPT-OSS 20B
+- **Fallback LLM**: Groq GPT-OSS 20B (`openai/gpt-oss-20b`)
 - **Embedding Model**: Google Gemini Embedding 2 (`models/gemini-embedding-2`)
 - **Dashboard Interface**: Streamlit
 
