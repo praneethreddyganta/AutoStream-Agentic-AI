@@ -52,8 +52,21 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
             if not has_inquiry:
                 # Bypasses intent classifier entirely to save quota!
                 return {"current_intent": "High-Intent Lead"}
+
+        # 3. Fast High-Intent & Pricing Detection (Deterministic & saves quota)
+        lead_intent_keywords = ["buy", "purchase", "sign up", "sign me up", "subscribe to", "checkout", "get pro", "want pro"]
+        if any(kw in latest_clean for kw in lead_intent_keywords):
+            return {"current_intent": "High-Intent Lead"}
+
+        pricing_keywords = [
+            "price", "pricing", "cost", "plan", "plans", "tier", "tiers", "free",
+            "refund", "support", "feature", "features", "how much", "basic", "pro",
+            "standard", "money-back", "guarantee"
+        ]
+        if any(kw in latest_clean for kw in pricing_keywords):
+            return {"current_intent": "Product/Pricing Inquiry"}
         
-        # 3. Standard intent classification using LLM
+        # 4. Standard intent classification using LLM
         # Build context from last 5 messages for intent classification stability
         history_messages = messages[:-1][-5:]
         history_str = ""

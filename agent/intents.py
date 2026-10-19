@@ -42,5 +42,10 @@ User's Latest Message: "{message}"
             return intent
         return "Unknown"
     except Exception as e:
-        print(f"[Error in Intent Detection]: {e}. Defaulting to 'Unknown'.")
+        print(f"[Error in Intent Detection]: {e}.")
+        clean = message.lower()
+        if any(kw in clean for kw in ["buy", "purchase", "sign up", "sign me up", "subscribe"]):
+            return "High-Intent Lead"
+        if any(kw in clean for kw in ["price", "pricing", "cost", "plan", "plans", "tier", "refund", "support", "how much", "basic", "pro"]):
+            return "Product/Pricing Inquiry"
         return "Unknown"

@@ -37,7 +37,7 @@ class AutoStreamRAG:
             
             # Build index in-memory using FAISS and embeddings
             self.vector_store = FAISS.from_documents(split_docs, self.embeddings)
-            self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 2})
+            self.retriever = self.vector_store.as_retriever(search_kwargs={"k": 4})
             
         except Exception as e:
             print(f"[Error Initializing RAG]: {e}")
