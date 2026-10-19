@@ -323,6 +323,11 @@ if lead_collection_stage == "completed" and completed_slots == 3:
 # Container for holding the chat thread history
 chat_container = st.container()
 
+def format_display_markdown(text: str) -> str:
+    import re
+    # Escape dollar signs before numbers (e.g. $29 -> \$29) so Streamlit doesn't parse as KaTeX LaTeX
+    return re.sub(r"\$(\d+)", r"\\\$\1", text)
+
 # Render chat messages inside the container
 with chat_container:
     if not messages:
@@ -352,7 +357,8 @@ with chat_container:
         for msg in messages:
             role = "user" if isinstance(msg, HumanMessage) else "assistant"
             with st.chat_message(role):
-                st.markdown(extract_text_content(msg.content))
+                clean_text = format_display_markdown(extract_text_content(msg.content))
+                st.markdown(clean_text)
 
 # Logic to handle user chat submissions (from either chat input or quick queries)
 user_query = st.chat_input("Ask a question or request a plan...")

@@ -61,7 +61,8 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
         pricing_keywords = [
             "price", "pricing", "cost", "plan", "plans", "tier", "tiers", "free",
             "refund", "support", "feature", "features", "how much", "basic", "pro",
-            "standard", "money-back", "guarantee"
+            "standard", "money-back", "guarantee", "amount", "rate", "rates", "charge",
+            "charges", "fee", "fees", "pay", "payment", "package", "packages", "quote"
         ]
         if any(kw in latest_clean for kw in pricing_keywords):
             return {"current_intent": "Product/Pricing Inquiry"}
