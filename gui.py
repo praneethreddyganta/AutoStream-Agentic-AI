@@ -278,7 +278,8 @@ with st.sidebar:
         st.markdown(f"**Knowledge Index:** `FAISS (Local)`")
         
         # Clear Conversation / Reset Session button
-        if st.button("Reset Conversation", use_container_width=True, type="secondary"):
+        if st.button("🔄 Reset Conversation & Cache", use_container_width=True, type="secondary"):
+            st.cache_resource.clear()
             st.session_state.thread_id = str(uuid.uuid4())
             st.rerun()
 
