@@ -4,6 +4,7 @@ import uuid
 import streamlit as st
 from dotenv import load_dotenv
 from langchain_core.messages import AIMessage, HumanMessage
+from agent.llm import extract_text_content
 
 # Load environment variables
 if os.path.exists(".ignore/.env"):
@@ -393,7 +394,7 @@ with chat_container:
         for msg in messages:
             role = "user" if isinstance(msg, HumanMessage) else "assistant"
             with st.chat_message(role):
-                st.markdown(msg.content)
+                st.markdown(extract_text_content(msg.content))
 
 # Logic to handle user chat submissions (from either chat input or quick queries)
 user_query = st.chat_input("Ask a question or request a plan...")

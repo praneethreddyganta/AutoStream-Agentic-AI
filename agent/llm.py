@@ -10,6 +10,36 @@ if os.path.exists(".ignore/.env"):
 else:
     load_dotenv()
 
+def extract_text_content(content) -> str:
+    """
+    Extracts a clean text string from message content, which may be a string,
+    a list of dictionaries (e.g. [{'type': 'text', 'text': '...', 'extras': ...}]),
+    or parts returned by Gemini / multimodal models.
+    """
+    if isinstance(content, str):
+        return content
+    elif isinstance(content, list):
+        texts = []
+        for part in content:
+            if isinstance(part, str):
+                texts.append(part)
+            elif isinstance(part, dict):
+                if "text" in part:
+                    texts.append(part["text"])
+                elif "content" in part:
+                    texts.append(str(part["content"]))
+                else:
+                    texts.append(str(part))
+            elif hasattr(part, "text"):
+                texts.append(str(part.text))
+            else:
+                texts.append(str(part))
+        return "".join(texts).strip()
+    elif isinstance(content, dict):
+        return str(content.get("text", content.get("content", str(content))))
+    return str(content)
+
+
 # Helper to format any prompt input into OpenAI-style role/content messages
 def convert_to_api_messages(prompt_input):
     if hasattr(prompt_input, "to_messages"):
@@ -31,7 +61,7 @@ def convert_to_api_messages(prompt_input):
             role = "assistant"
         else:
             role = "user"
-        api_messages.append({"role": role, "content": msg.content})
+        api_messages.append({"role": role, "content": extract_text_content(msg.content)})
     return api_messages
 
 
@@ -94,10 +124,13 @@ class GracefulLimitExceededFallback:
 
 
 def make_logging_wrapper(model_runnable, name):
-    """Wraps any LangChain-compatible model in a logger that triggers on exception."""
+    """Wraps any LangChain-compatible model in a logger and ensures output content is clean plain text."""
     def _invoke(input, config=None, **kwargs):
         try:
-            return model_runnable.invoke(input, config, **kwargs)
+            result = model_runnable.invoke(input, config, **kwargs)
+            if hasattr(result, "content"):
+                result.content = extract_text_content(result.content)
+            return result
         except Exception as e:
             print(f"⚠️ [LLM Fallback Warning] Model '{name}' failed: {e}")
             raise e

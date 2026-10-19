@@ -11,7 +11,7 @@ from agent.state import AgentState
 from agent.intents import classify_intent
 from agent.tools import mock_lead_capture
 from agent.rag import AutoStreamRAG
-from agent.llm import DEFAULT_LIMIT_REACHED_MESSAGE
+from agent.llm import DEFAULT_LIMIT_REACHED_MESSAGE, extract_text_content
 from agent.prompts import (
     RAG_SYSTEM_PROMPT,
     LEAD_EXTRACTION_SYSTEM_PROMPT,
@@ -35,7 +35,7 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
         if not messages:
             return {"current_intent": "Greeting"}
         
-        latest_message = messages[-1].content
+        latest_message = extract_text_content(messages[-1].content)
         latest_clean = latest_message.strip().lower()
         
         # 1. Local Greeting Detection (Bypasses LLM call to save quota!)
@@ -59,7 +59,7 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
         history_str = ""
         for msg in history_messages:
             role = "User" if isinstance(msg, HumanMessage) else "Assistant"
-            history_str += f"{role}: {msg.content}\n"
+            history_str += f"{role}: {extract_text_content(msg.content)}\n"
             
         detected_intent = classify_intent(latest_message, history_str, llm)
         
@@ -74,7 +74,7 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
         """
         Answers product and pricing questions by querying the local FAISS index.
         """
-        latest_message = state["messages"][-1].content
+        latest_message = extract_text_content(state["messages"][-1].content)
         context = rag_retriever.retrieve_context(latest_message)
         
         prompt = ChatPromptTemplate.from_messages([
@@ -88,6 +88,8 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
                 "context": context,
                 "messages": state["messages"]
             })
+            if hasattr(response, "content"):
+                response.content = extract_text_content(response.content)
         except Exception as e:
             print(f"⚠️ [RAG Node Limit Fallback]: {e}")
             response = AIMessage(content=DEFAULT_LIMIT_REACHED_MESSAGE)
@@ -99,7 +101,7 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
         Extracts lead information and manages the progressive slot-filling stage.
         """
         messages = state["messages"]
-        latest_message = messages[-1].content
+        latest_message = extract_text_content(messages[-1].content)
         
         # Extract fields using structured JSON extraction
         extract_prompt = ChatPromptTemplate.from_messages([
@@ -122,7 +124,7 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
             })
             
             # Sanitise formatting
-            content = response.content.strip()
+            content = extract_text_content(response.content).strip()
             if content.startswith("```"):
                 lines = content.split("\n")
                 if lines[0].startswith("```"):
@@ -210,6 +212,8 @@ def build_agent_graph(llm: BaseChatModel, rag_retriever: AutoStreamRAG):
         try:
             chain = prompt | llm
             response = chain.invoke({"messages": state["messages"]})
+            if hasattr(response, "content"):
+                response.content = extract_text_content(response.content)
         except Exception as e:
             print(f"⚠️ [Response Gen Limit Fallback]: {e}")
             response = AIMessage(content=DEFAULT_LIMIT_REACHED_MESSAGE)

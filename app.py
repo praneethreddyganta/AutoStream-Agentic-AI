@@ -50,7 +50,7 @@ def main():
         
         from agent.rag import AutoStreamRAG
         from agent.graph import build_agent_graph
-        from agent.llm import get_fallback_llm
+        from agent.llm import get_fallback_llm, extract_text_content
         
         # 1. Initialize core resilient LLM chain and Embeddings (Primary: Gemini 3.5 Flash-Lite, Fallback: Groq GPT-OSS 20B)
         print("  🔹 Step 1/3: Instantiating resilient Chat LLM chain and Embeddings...")
@@ -114,7 +114,7 @@ def main():
             messages = state_output.get("messages", [])
             if messages:
                 last_msg = messages[-1]
-                print(f"Bot: {last_msg.content}")
+                print(f"Bot: {extract_text_content(last_msg.content)}")
                 
         except KeyboardInterrupt:
             print("\n👋 Session ended. Goodbye!")

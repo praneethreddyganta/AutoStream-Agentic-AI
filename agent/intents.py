@@ -3,6 +3,7 @@ from typing import Literal
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.language_models.chat_models import BaseChatModel
 from agent.prompts import INTENT_CLASSIFIER_SYSTEM_PROMPT
+from agent.llm import extract_text_content
 
 def classify_intent(message: str, history_str: str, llm: BaseChatModel) -> str:
     """
@@ -25,7 +26,7 @@ User's Latest Message: "{message}"
         })
         
         # Clean up any potential markdown formatting in response content
-        content = response.content.strip()
+        content = extract_text_content(response.content).strip()
         if content.startswith("```"):
             # Strip ```json ... ```
             lines = content.split("\n")
