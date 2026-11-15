@@ -43,17 +43,22 @@ class AutoStreamRAG:
             print(f"[Error Initializing RAG]: {e}")
             raise e
 
-    def retrieve_context(self, query: str) -> str:
+    def retrieve_chunks(self, query: str) -> list[str]:
         """
-        Retrieves relevant context matching the query from the vector store.
+        Retrieves the knowledge base chunks most relevant to the query.
         """
         if not self.retriever:
-            return ""
-        
+            return []
+
         try:
             docs = self.retriever.invoke(query)
-            context = "\n\n".join([doc.page_content for doc in docs])
-            return context
+            return [doc.page_content for doc in docs]
         except Exception as e:
             print(f"[Error Retrieving Context]: {e}")
-            return ""
+            return []
+
+    def retrieve_context(self, query: str) -> str:
+        """
+        Retrieves relevant context matching the query as a single string.
+        """
+        return "\n\n".join(self.retrieve_chunks(query))

@@ -97,20 +97,31 @@ AutoStream-Agentic-AI/
 ├── app.py                     # CLI Interactive Chatbot Runner
 ├── streamlit_app.py           # Premium Streamlit GUI Web Dashboard
 ├── requirements.txt           # Python Package Dependencies
+├── requirements-dev.txt       # Adds pytest for the offline test suite
+├── pytest.ini                 # Test configuration
 ├── .gitignore                 # Files excluded from Git
 ├── .env.example               # Environment Variables template
 │
 ├── agent/                     # Core Agent Module
 │   ├── __init__.py
+│   ├── service.py             # AgentService: the one entry point used by CLI, UI and backends
 │   ├── graph.py               # LangGraph StateGraph state machine structure
-│   ├── intents.py             # LLM Intent classification node logic
+│   ├── intents.py             # Rule-based + LLM intent classification, email validation
+│   ├── prompts.py             # System prompts (behaviour only, no product facts)
 │   ├── llm.py                 # Resilient LLM setup (Gemini 3.5 Flash-Lite + Groq GPT-OSS 20B)
 │   ├── rag.py                 # FAISS Loader and semantic retrieval helper
 │   ├── state.py               # TypedDict schema definition for Agent State
 │   └── tools.py               # Mock CRM API Lead Capture function
 │
-├── data/                      # Local Knowledge Base
+├── data/                      # Local Knowledge Base (single source of product facts)
 │   └── knowledge_base.md      # AutoStream pricing tiers, features, and policies
+│
+├── tests/                     # Offline pytest suite (no API keys or network needed)
+│
+├── scripts/                   # Live API smoke checks (use real quota)
+│   ├── check_models.py        # Verifies the Gemini chat + embedding models respond
+│   ├── check_groq.py          # Verifies the Groq fallback responds
+│   └── check_live_graph.py    # Runs a full conversation against the live APIs
 │
 └── README.md                  # Comprehensive documentation and setup guide
 
@@ -167,6 +178,36 @@ EMBEDDING_MODEL=models/gemini-embedding-2
   streamlit run streamlit_app.py
   ```
 
+### 6. Running the Tests
+The test suite is fully offline: it uses a fake LLM and retriever, so no API keys are required.
+```bash
+pip install -r requirements-dev.txt
+python -m pytest
+```
+To smoke-test against the live APIs (uses quota):
+```bash
+python scripts/check_live_graph.py
+```
+
+---
+
+## 🧩 Using the Agent from Your Own Code
+
+Every client goes through `AgentService`, which hides the graph, its memory and its state keys:
+```python
+from agent.service import AgentService
+
+service = AgentService.from_env()
+result = service.chat("session-123", "I want the Pro plan for my YouTube channel.")
+print(result.reply, result.intent, result.lead_stage, result.lead, result.retrieved_chunks)
+
+service.get_session("session-123")   # full conversation snapshot (JSON-serialisable via .to_dict())
+service.reset("session-123")         # forget one conversation only
+```
+Pass `lead_capture=your_function` to send completed leads to a real CRM, and `checkpointer=...` to persist conversations outside the process.
+
+**Single source of truth:** all plans, prices and policies live in `data/knowledge_base.md`. The prompts contain no product facts, so editing the knowledge base is all that is needed to change what the agent says (a test enforces this).
+
 ---
 
 ## ☁️ Streamlit Community Cloud Deployment
@@ -201,13 +242,13 @@ User: How much does the Pro plan cost?
 Agent: The AutoStream Pro Plan costs $79/month. It includes unlimited videos, 4K rendering, AI captions, and 24/7 priority live support.
 
 User: I want the Pro plan for my YouTube channel.
-Agent: Excellent choice! I'd love to help you get started on our Pro Plan. May I know your name first?
+Agent: Great! May I know your name?
 
 User: Praneeth
-Agent: Thanks, Praneeth! Please share your email address.
+Agent: Please share your email.
 
 User: praneeth@gmail.com
-Agent: Lead captured successfully: Praneeth, praneeth@gmail.com, YouTube!
+Agent: Lead captured successfully: Praneeth, praneeth@gmail.com, YouTube
 ```
 
 ---

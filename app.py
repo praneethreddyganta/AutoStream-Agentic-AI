@@ -2,6 +2,8 @@ import os
 import sys
 from dotenv import load_dotenv
 
+from agent.llm import DEFAULT_LIMIT_REACHED_MESSAGE
+
 # Load environment variables from .ignore/.env or .env file
 if os.path.exists(".ignore/.env"):
     load_dotenv(".ignore/.env")
@@ -45,39 +47,20 @@ def main():
     print("⚙️  Initializing AI models and local FAISS vector store. Please wait...")
     
     try:
-        from langchain_google_genai import GoogleGenerativeAIEmbeddings
-        from langchain_core.messages import HumanMessage
-        
-        from agent.rag import AutoStreamRAG
-        from agent.graph import build_agent_graph
-        from agent.llm import get_fallback_llm, extract_text_content
-        
-        # 1. Initialize core resilient LLM chain and Embeddings (Primary: Gemini 3.5 Flash-Lite, Fallback: Groq GPT-OSS 20B)
-        print("  🔹 Step 1/3: Instantiating resilient Chat LLM chain and Embeddings...")
-        llm = get_fallback_llm()
-        embeddings = GoogleGenerativeAIEmbeddings(model=os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-2"))
-        
-        # 2. Build local RAG Knowledge Base
-        print("  🔹 Step 2/3: Loading local markdown and generating FAISS vector index (via Google API)...")
-        script_dir = os.path.dirname(os.path.abspath(__file__))
-        kb_path = os.path.join(script_dir, "data", "knowledge_base.md")
-        rag = AutoStreamRAG(kb_path, embeddings)
-        
-        # 3. Assemble and compile the LangGraph workflow
-        print("  🔹 Step 3/3: Assembling and compiling LangGraph StateGraph...")
-        compiled_graph = build_agent_graph(llm, rag)
-        
+        from agent.service import AgentService
+
+        # Builds the resilient LLM chain, embeddings, FAISS index and LangGraph workflow
+        service = AgentService.from_env()
         print("✅ Initialization completed. The agent is ready!\n")
-        
+
     except Exception as e:
         print(f"\n❌ FAILED TO INITIALIZE AGENT: {e}")
         print("Please ensure your Python dependencies are fully installed using:")
         print("   pip install -r requirements.txt\n")
         sys.exit(1)
-        
-    # Configure conversation checkpoint thread identifier
-    config = {"configurable": {"thread_id": "autostream-cli-user-session"}}
-    
+
+    session_id = "autostream-cli-user-session"
+
     # Start conversational loop
     while True:
         try:
@@ -87,36 +70,24 @@ def main():
             if user_input.strip().lower() in ["exit", "quit", "q"]:
                 print("\n👋 Thank you for chatting with AutoStream! Have a great day!\n")
                 break
-                
-            # Send message to LangGraph StateGraph workflow
-            # Passing the user message as a list of HumanMessage
-            state_input = {
-                "messages": [HumanMessage(content=user_input)]
-            }
-            
-            # Execute step of graph
+
             try:
-                state_output = compiled_graph.invoke(state_input, config)
+                result = service.chat(session_id, user_input)
             except Exception as e:
-                print("\nBot: We are currently experiencing very high demand and our service limit has been reached. Please visit us again a little later, and we will be delighted to assist you. Thank you for your patience and understanding!\n")
+                print(f"\033[90m[Chat Error: {e}]\033[0m")
+                print(f"\nBot: {DEFAULT_LIMIT_REACHED_MESSAGE}\n")
                 continue
-            
+
             # Print diagnostic internal state markers (Sleek agentic debugger)
-            intent = state_output.get("current_intent", "Unknown")
-            stage = state_output.get("lead_collection_stage", "none")
-            name = state_output.get("lead_name") or "None"
-            email = state_output.get("lead_email") or "None"
-            platform = state_output.get("lead_platform") or "None"
-            
-            print(f"\033[90m[Agent Diagnostics | Intent: {intent} | Stage: {stage} | Lead: (Name={name}, Email={email}, Platform={platform})]\033[0m")
-            
-            # Print last AI Message
-            messages = state_output.get("messages", [])
-            if messages:
-                last_msg = messages[-1]
-                print(f"Bot: {extract_text_content(last_msg.content)}")
-                
-        except KeyboardInterrupt:
+            lead = result.lead
+            print(
+                f"\033[90m[Agent Diagnostics | Intent: {result.intent} | Stage: {result.lead_stage} | "
+                f"Lead: (Name={lead.name}, Email={lead.email}, Platform={lead.platform}) | "
+                f"KB chunks used: {len(result.retrieved_chunks)}]\033[0m"
+            )
+            print(f"Bot: {result.reply}")
+
+        except (KeyboardInterrupt, EOFError):
             print("\n👋 Session ended. Goodbye!")
             break
         except Exception as e:

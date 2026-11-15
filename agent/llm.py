@@ -115,11 +115,12 @@ class GracefulLimitExceededFallback:
     def invoke(self, input, config=None, **kwargs):
         input_str = str(input)
         # If the graph node is requesting intent classification or lead slot extraction JSON,
-        # return safe JSON so graph flow continues without JSON decode error
-        if "INTENT_CLASSIFIER" in input_str or '"intent"' in input_str:
-            return AIMessage(content='{"intent": "Unknown"}')
-        if "LEAD_EXTRACTION" in input_str or '"name":' in input_str:
-            return AIMessage(content='{"name": null, "email": null, "platform": null}')
+        # return safe JSON so graph flow continues without JSON decode error.
+        # "limit_reached" lets the calling node tell "nothing found" apart from "no model available".
+        if "routing assistant" in input_str or '"intent"' in input_str:
+            return AIMessage(content='{"intent": "Unknown", "limit_reached": true}')
+        if "data extraction agent" in input_str or '"name":' in input_str:
+            return AIMessage(content='{"name": null, "email": null, "platform": null, "limit_reached": true}')
         return AIMessage(content=self.message)
 
 
