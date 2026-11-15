@@ -4,7 +4,8 @@ venv/
 env/
 
 # Python cache
-**pycache**/
+__pycache__/
+.pytest_cache/
 *.pyc
 *.pyo
 *.pyd

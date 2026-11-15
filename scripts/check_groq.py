@@ -9,11 +9,6 @@ else:
 
 groq_key = os.getenv("GROQ_API_KEY")
 print("Groq Key exists:", bool(groq_key))
-if groq_key:
-    # Print length and sanitized representation for debugging without exposing the full key
-    print("Groq Key Length:", len(groq_key))
-    print("Groq Key Starts With:", groq_key[:8] if len(groq_key) > 8 else groq_key)
-
 headers = {
     "Authorization": f"Bearer {groq_key}",
     "Content-Type": "application/json"

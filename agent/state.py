@@ -32,3 +32,7 @@ class AgentState(TypedDict):
     # "ask_platform": Prompting/Waiting for their content platform (e.g. YouTube, IG, TikTok).
     # "completed": All fields are captured and the mock capture tool is executed.
     lead_collection_stage: Literal["none", "ask_name", "ask_email", "ask_platform", "completed"]
+
+    # Knowledge base chunks retrieved for the latest answer (empty when no retrieval ran).
+    # Exposed so the UI can show real retrieval stats and groundedness checks can audit answers.
+    retrieved_chunks: list[str]

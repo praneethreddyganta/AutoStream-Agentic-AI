@@ -1,10 +1,10 @@
 import os
-import sys
+import re
 import uuid
+from html import escape
+
 import streamlit as st
 from dotenv import load_dotenv
-from langchain_core.messages import AIMessage, HumanMessage
-from agent.llm import extract_text_content
 
 # Load environment variables
 if os.path.exists(".ignore/.env"):
@@ -13,9 +13,13 @@ else:
     load_dotenv()
 
 # Inject Streamlit secrets into environment variables for LangChain & fallback LLM SDKs
-for key in ["GOOGLE_API_KEY", "MODEL_NAME", "GROQ_API_KEY", "GROQ_MODEL", "EMBEDDING_MODEL"]:
-    if key in st.secrets:
-        os.environ[key] = st.secrets[key]
+# (st.secrets raises when no secrets.toml exists, e.g. local runs that only use .env)
+try:
+    for key in ["GOOGLE_API_KEY", "MODEL_NAME", "GROQ_API_KEY", "GROQ_MODEL", "EMBEDDING_MODEL"]:
+        if key in st.secrets:
+            os.environ[key] = st.secrets[key]
+except Exception:
+    pass
 
 # Load configured model name
 MODEL_NAME = os.getenv("MODEL_NAME", "gemini-3.5-flash-lite")
@@ -189,32 +193,14 @@ def verify_env_key():
     return True
 
 @st.cache_resource
-def load_cached_agent_graph(google_api_key, groq_api_key, model_name, embedding_model):
-    """Initialises ChatGemini/Fallbacks, Embeddings, RAG context, and compiles LangGraph StateGraph once."""
-    from langchain_google_genai import GoogleGenerativeAIEmbeddings
-    from agent.rag import AutoStreamRAG
-    from agent.graph import build_agent_graph
-    from agent.llm import get_fallback_llm
-    
-    # Instantiate the resilient fallback LLM chain (Primary: Gemini 3.5 Flash-Lite, Fallback: Groq GPT-OSS 20B)
-    llm = get_fallback_llm()
-    # Explicitly pass api key to embeddings to ensure it uses the correct active key
-    embeddings = GoogleGenerativeAIEmbeddings(model=embedding_model, google_api_key=google_api_key)
-    
-    # Assemble local FAISS RAG index
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    kb_path = os.path.join(script_dir, "data", "knowledge_base.md")
-    rag = AutoStreamRAG(kb_path, embeddings)
-    
-    # Compile StateGraph state machine
-    return build_agent_graph(llm, rag)
+def load_agent_service(google_api_key, groq_api_key, model_name, embedding_model):
+    """Builds the agent service (LLM fallback chain, embeddings, FAISS index, graph) once per key/model set."""
+    from agent.service import AgentService
+    return AgentService.from_env(google_api_key=google_api_key, embedding_model=embedding_model)
 
-# Initialize Session thread_id for state preservation
+# Each browser session gets its own conversation id
 if "thread_id" not in st.session_state:
     st.session_state.thread_id = str(uuid.uuid4())
-
-# Set up graph config
-graph_config = {"configurable": {"thread_id": f"autostream-web-{st.session_state.thread_id}"}}
 
 # ------------------ UI Structure ------------------
 
@@ -235,27 +221,27 @@ groq_key = os.getenv("GROQ_API_KEY", "")
 model_name = os.getenv("MODEL_NAME", "gemini-3.5-flash-lite")
 embedding_model = os.getenv("EMBEDDING_MODEL", "models/gemini-embedding-2")
 
-# Load the compiled LangGraph agent
+# Load the agent service
 try:
-    compiled_graph = load_cached_agent_graph(google_key, groq_key, model_name, embedding_model)
+    service = load_agent_service(google_key, groq_key, model_name, embedding_model)
 except Exception as e:
-    st.error(f"Failed to compile LangGraph state machine: {e}")
+    st.error(f"Failed to initialise the AutoStream agent: {e}")
     st.stop()
 
-# Retrieve latest LangGraph state values for this thread
-current_state = compiled_graph.get_state(graph_config)
-state_values = current_state.values if current_state else {}
+session_id = f"autostream-web-{st.session_state.thread_id}"
+session = service.get_session(session_id)
 
 # Extract active variables
-messages = state_values.get("messages", [])
-current_intent = state_values.get("current_intent", "Unknown")
-lead_collection_stage = state_values.get("lead_collection_stage", "none")
-lead_name = state_values.get("lead_name")
-lead_email = state_values.get("lead_email")
-lead_platform = state_values.get("lead_platform")
+messages = session.messages
+current_intent = session.intent
+lead_collection_stage = session.lead_stage
+lead_name = session.lead.name
+lead_email = session.lead.email
+lead_platform = session.lead.platform
+retrieved_chunks = session.retrieved_chunks
 
 # Calculate lead completion progress metrics
-completed_slots = sum([1 for val in [lead_name, lead_email, lead_platform] if val])
+completed_slots = session.lead.filled_slots
 progress_percentage = int((completed_slots / 3.0) * 100)
 
 # Sidebar layout
@@ -278,15 +264,15 @@ with st.sidebar:
         
         # Checklist items
         name_icon = "🟢 ✓" if lead_name else "⚪"
-        name_text = f"**Name:** {lead_name}" if lead_name else "Name: *Pending*"
+        name_text = f"<b>Name:</b> {escape(lead_name)}" if lead_name else "Name: <i>Pending</i>"
         st.markdown(f"<div class='checklist-item'>{name_icon} {name_text}</div>", unsafe_allow_html=True)
         
         email_icon = "🟢 ✓" if lead_email else "⚪"
-        email_text = f"**Email:** {lead_email}" if lead_email else "Email: *Pending*"
+        email_text = f"<b>Email:</b> {escape(lead_email)}" if lead_email else "Email: <i>Pending</i>"
         st.markdown(f"<div class='checklist-item'>{email_icon} {email_text}</div>", unsafe_allow_html=True)
         
         platform_icon = "🟢 ✓" if lead_platform else "⚪"
-        platform_text = f"**Platform:** {lead_platform}" if lead_platform else "Platform: *Pending*"
+        platform_text = f"<b>Platform:</b> {escape(lead_platform)}" if lead_platform else "Platform: <i>Pending</i>"
         st.markdown(f"<div class='checklist-item'>{platform_icon} {platform_text}</div>", unsafe_allow_html=True)
         
     st.markdown("---")
@@ -294,14 +280,15 @@ with st.sidebar:
     # RAG Retrieval Status Indicator Panel
     st.markdown('### 🔍 Retrieval status')
     with st.container(border=True):
-        if current_intent == "Product/Pricing Inquiry":
+        if retrieved_chunks:
             st.markdown("🌐 **FAISS Vector DB:** `🟢 RETRIEVED`")
-            st.markdown("📄 **Index Chunks:** `2 loaded`")
-            st.markdown("<p style='font-size: 0.8rem; color: #10b981;'>Last turn retrieved pricing context successfully.</p>", unsafe_allow_html=True)
+            st.markdown(f"📄 **Chunks used for last answer:** `{len(retrieved_chunks)}`")
+            with st.expander("View retrieved context"):
+                for chunk in retrieved_chunks:
+                    st.text(chunk)
         else:
             st.markdown("🌐 **FAISS Vector DB:** `⚪ STANDBY`")
-            st.markdown("📄 **Index Chunks:** `4 loaded`")
-            st.markdown("<p style='font-size: 0.8rem; color: #6b7280;'>Retriever will trigger on pricing inquiries.</p>", unsafe_allow_html=True)
+            st.markdown("<p style='font-size: 0.8rem; color: #6b7280;'>No retrieval was needed for the last turn.</p>", unsafe_allow_html=True)
             
     st.markdown("---")
     
@@ -321,8 +308,9 @@ with st.sidebar:
         st.markdown("🔗 **Fallback Chain:** `🟢 ENABLED`")
         
         # Clear Conversation / Reset Session button
-        if st.button("🔄 Reset Conversation & Cache", use_container_width=True, type="secondary"):
-            st.cache_resource.clear()
+        if st.button("🔄 Reset Conversation", use_container_width=True, type="secondary"):
+            # Forget only this visitor's conversation; other users' sessions are untouched
+            service.reset(session_id)
             st.session_state.thread_id = str(uuid.uuid4())
             st.rerun()
 
@@ -360,14 +348,17 @@ st.markdown("---")
 
 # Display a success toast and balloons if lead just completed
 if lead_collection_stage == "completed" and completed_slots == 3:
-    st.success(f"🎉 Lead Captured Successfully! Details: **{lead_name}**, **{lead_email}**, **{lead_platform}**")
-    st.balloons()
+    st.success("🎉 Lead Captured Successfully!")
+    st.text(f"{lead_name} · {lead_email} · {lead_platform}")
+    # Celebrate once per captured lead, not on every rerun
+    if st.session_state.get("celebrated_session") != session_id:
+        st.session_state.celebrated_session = session_id
+        st.balloons()
 
 # Container for holding the chat thread history
 chat_container = st.container()
 
 def format_display_markdown(text: str) -> str:
-    import re
     # Escape dollar signs before numbers (e.g. $29 -> \$29) so Streamlit doesn't parse as KaTeX LaTeX
     return re.sub(r"\$(\d+)", r"\\\$\1", text)
 
@@ -398,10 +389,8 @@ with chat_container:
                 st.rerun()
     else:
         for msg in messages:
-            role = "user" if isinstance(msg, HumanMessage) else "assistant"
-            with st.chat_message(role):
-                clean_text = format_display_markdown(extract_text_content(msg.content))
-                st.markdown(clean_text)
+            with st.chat_message(msg.role):
+                st.markdown(format_display_markdown(msg.content))
 
 # Logic to handle user chat submissions (from either chat input or quick queries)
 user_query = st.chat_input("Ask a question or request a plan...")
@@ -416,19 +405,15 @@ if user_query:
     # Render user query in chat log immediately
     with chat_container:
         with st.chat_message("user"):
-            st.markdown(user_query)
+            st.markdown(format_display_markdown(user_query))
             
-    # Send user message payload to LangGraph state machine
-    state_input = {
-        "messages": [HumanMessage(content=user_query)]
-    }
-    
     with st.spinner("Processing..."):
         try:
-            compiled_graph.invoke(state_input, graph_config)
+            service.chat(session_id, user_query)
             # Only refresh screen to render latest state if execution succeeded
             st.rerun()
         except Exception as e:
+            print(f"[Chat Error]: {e}")
             st.info(
                 "⏳ **Notice:** We are currently experiencing very high demand and our service limit has been reached. "
                 "Please visit us again a little later, and we will be delighted to assist you. "
